@@ -1,115 +1,213 @@
-import { login } from '@/routes';
-import { store } from '@/routes/register';
-import { Form, Head } from '@inertiajs/react';
+import { login, register as registerRoute } from '@/routes';
+import { Head, Link, useForm } from '@inertiajs/react';
+import React from 'react';
 
+import AppLogoIcon from '@/components/app-logo-icon';
 import InputError from '@/components/input-error';
-import TextLink from '@/components/text-link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
-import AuthLayout from '@/layouts/auth-layout';
 
 export default function Register() {
+    const { data, setData, post, processing, errors, reset } = useForm({
+        name: '',
+        username: '',
+        email: '',
+        password: '',
+        password_confirmation: '',
+    });
+
+    const submit = (e: React.FormEvent) => {
+        e.preventDefault();
+        post(registerRoute().url, {
+            onFinish: () => reset('password', 'password_confirmation'),
+        });
+    };
+
     return (
-        <AuthLayout
-            title="Create an account"
-            description="Enter your details below to create your account"
-        >
-            <Head title="Register" />
-            <Form
-                {...store.form()}
-                resetOnSuccess={['password', 'password_confirmation']}
-                disableWhileProcessing
-                className="flex flex-col gap-6"
-            >
-                {({ processing, errors }) => (
-                    <>
-                        <div className="grid gap-6">
-                            <div className="grid gap-2">
-                                <Label htmlFor="name">Name</Label>
+        <div className="flex min-h-screen flex-col items-center justify-center bg-slate-50 p-4 sm:p-6 lg:p-8">
+            <Head title="Daftar - Medanpedia" />
+
+            <style>{`
+                @import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,200..800&display=swap');
+                * { font-family: 'Bricolage Grotesque', sans-serif; }
+            `}</style>
+
+            <div className="w-full max-w-[440px]">
+                <div className="overflow-hidden rounded-4xl bg-white px-8 py-10 shadow-2xl shadow-slate-200/50 sm:px-12 sm:py-12">
+                    {/* Header/Logo */}
+                    <div className="mb-10 flex flex-col items-center">
+                        <div className="mb-4 flex items-center gap-2">
+                            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-600 p-2 shadow-lg shadow-indigo-100">
+                                <AppLogoIcon className="h-full w-full fill-white" />
+                            </div>
+                            <span className="text-2xl font-bold tracking-tight text-[#1e293b]">
+                                Medanpedia
+                            </span>
+                        </div>
+
+                        <div className="text-center">
+                            <h1 className="text-xl font-bold text-[#1e293b] sm:text-2xl">
+                                Daftar
+                            </h1>
+                            <p className="mt-1 text-sm text-slate-400">
+                                Segera mendaftar dan dapatkan keuntungan.
+                            </p>
+                        </div>
+                    </div>
+
+                    <form onSubmit={submit} className="space-y-6">
+                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                            <div className="space-y-1.5">
+                                <Label
+                                    htmlFor="name"
+                                    className="text-[11px] font-bold tracking-wider text-slate-400 uppercase"
+                                >
+                                    Nama Lengkap
+                                </Label>
                                 <Input
                                     id="name"
                                     type="text"
+                                    value={data.name}
+                                    onChange={(e) =>
+                                        setData('name', e.target.value)
+                                    }
                                     required
                                     autoFocus
-                                    tabIndex={1}
-                                    autoComplete="name"
-                                    name="name"
-                                    placeholder="Full name"
+                                    className="h-11 border border-slate-200 bg-slate-50 px-4 text-sm text-slate-900 transition-all focus:border-indigo-500 focus:bg-white focus:ring-0 focus:outline-none focus-visible:ring-0"
                                 />
-                                <InputError
-                                    message={errors.name}
-                                    className="mt-2"
-                                />
+                                <InputError message={errors.name} />
                             </div>
 
-                            <div className="grid gap-2">
-                                <Label htmlFor="email">Email address</Label>
+                            <div className="space-y-1.5">
+                                <Label
+                                    htmlFor="username"
+                                    className="text-[11px] font-bold tracking-wider text-slate-400 uppercase"
+                                >
+                                    Nama Pengguna
+                                </Label>
                                 <Input
-                                    id="email"
-                                    type="email"
+                                    id="username"
+                                    type="text"
+                                    value={data.username}
+                                    onChange={(e) =>
+                                        setData('username', e.target.value)
+                                    }
                                     required
-                                    tabIndex={2}
-                                    autoComplete="email"
-                                    name="email"
-                                    placeholder="email@example.com"
+                                    placeholder="Username"
+                                    className="h-11 border border-slate-200 bg-slate-50 px-4 text-sm text-slate-900 transition-all focus:border-indigo-500 focus:bg-white focus:ring-0 focus:outline-none focus-visible:ring-0"
                                 />
-                                <InputError message={errors.email} />
+                                <InputError message={errors.username} />
                             </div>
+                        </div>
 
-                            <div className="grid gap-2">
-                                <Label htmlFor="password">Password</Label>
+                        <div className="space-y-1.5">
+                            <Label
+                                htmlFor="email"
+                                className="text-[11px] font-bold tracking-wider text-slate-400 uppercase"
+                            >
+                                Email
+                            </Label>
+                            <Input
+                                id="email"
+                                type="email"
+                                value={data.email}
+                                onChange={(e) =>
+                                    setData('email', e.target.value)
+                                }
+                                required
+                                className="h-11 border border-slate-200 bg-slate-50 px-4 text-sm text-slate-900 transition-all focus:border-indigo-500 focus:bg-white focus:ring-0 focus:outline-none focus-visible:ring-0"
+                            />
+                            <InputError message={errors.email} />
+                        </div>
+
+                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                            <div className="space-y-1.5">
+                                <Label
+                                    htmlFor="password"
+                                    className="text-[11px] font-bold tracking-wider text-slate-400 uppercase"
+                                >
+                                    Kata Sandi
+                                </Label>
                                 <Input
                                     id="password"
                                     type="password"
+                                    value={data.password}
+                                    onChange={(e) =>
+                                        setData('password', e.target.value)
+                                    }
                                     required
-                                    tabIndex={3}
-                                    autoComplete="new-password"
-                                    name="password"
-                                    placeholder="Password"
+                                    className="h-11 border border-slate-200 bg-slate-50 px-4 text-sm text-slate-900 transition-all focus:border-indigo-500 focus:bg-white focus:ring-0 focus:outline-none focus-visible:ring-0"
                                 />
                                 <InputError message={errors.password} />
                             </div>
 
-                            <div className="grid gap-2">
-                                <Label htmlFor="password_confirmation">
-                                    Confirm password
+                            <div className="space-y-1.5">
+                                <Label
+                                    htmlFor="password_confirmation"
+                                    className="text-[11px] font-bold tracking-wider text-slate-400 uppercase"
+                                >
+                                    Konfirmasi
                                 </Label>
                                 <Input
                                     id="password_confirmation"
                                     type="password"
+                                    value={data.password_confirmation}
+                                    onChange={(e) =>
+                                        setData(
+                                            'password_confirmation',
+                                            e.target.value,
+                                        )
+                                    }
                                     required
-                                    tabIndex={4}
-                                    autoComplete="new-password"
-                                    name="password_confirmation"
-                                    placeholder="Confirm password"
+                                    className="h-11 border border-slate-200 bg-slate-50 px-4 text-sm text-slate-900 transition-all focus:border-indigo-500 focus:bg-white focus:ring-0 focus:outline-none focus-visible:ring-0"
                                 />
                                 <InputError
                                     message={errors.password_confirmation}
                                 />
                             </div>
+                        </div>
 
+                        <div className="pt-2">
+                            <p className="mb-4 text-center text-xs leading-relaxed text-slate-400">
+                                Dengan mendaftar berarti Anda setuju dengan{' '}
+                                <Link
+                                    href="/terms"
+                                    className="font-bold text-[#6366f1] hover:underline"
+                                >
+                                    Ketentuan Layanan
+                                </Link>
+                                .
+                            </p>
                             <Button
                                 type="submit"
-                                className="mt-2 w-full"
-                                tabIndex={5}
-                                data-test="register-user-button"
+                                className="h-12 w-full rounded-2xl bg-[#6366f1] text-[15px] font-bold text-white shadow-lg shadow-indigo-100/50 transition-all hover:bg-[#5558e6] hover:shadow-xl active:scale-[0.98]"
+                                disabled={processing}
                             >
-                                {processing && <Spinner />}
-                                Create account
+                                {processing ? (
+                                    <Spinner className="mr-2 h-4 w-4" />
+                                ) : null}
+                                Daftar
                             </Button>
-                        </div>
 
-                        <div className="text-center text-sm text-muted-foreground">
-                            Already have an account?{' '}
-                            <TextLink href={login()} tabIndex={6}>
-                                Log in
-                            </TextLink>
+                            <div className="mt-8 text-center text-sm font-medium text-slate-500">
+                                Sudah Mempunyai Akun?{' '}
+                                <Link
+                                    href={login()}
+                                    className="font-bold text-[#6366f1] transition-colors hover:text-[#5558e6] hover:underline"
+                                >
+                                    Masuk
+                                </Link>
+                            </div>
                         </div>
-                    </>
-                )}
-            </Form>
-        </AuthLayout>
+                    </form>
+                </div>
+
+                <div className="mt-8 text-center text-[11px] font-medium tracking-wide text-slate-400 uppercase">
+                    © 2028 Medanpedia - SMM Panel Indonesia Terbaik dan Termudah
+                </div>
+            </div>
+        </div>
     );
 }

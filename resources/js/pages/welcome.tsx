@@ -1,13 +1,12 @@
-import { dashboard, login, register } from '@/routes';
-import { type SharedData } from '@/types';
-import { Head, Link, usePage } from '@inertiajs/react';
+import LandingFooter from '@/components/landing-footer';
+import LandingNavbar from '@/components/landing-navbar';
+import { register } from '@/routes';
+import { Head, Link } from '@inertiajs/react';
 import {
     ArrowRight,
     ChevronDown,
     Facebook,
     Instagram,
-    LayoutDashboard,
-    LogIn,
     MonitorPlay,
     Rocket,
     Send,
@@ -15,7 +14,6 @@ import {
     Sparkles,
     TrendingUp,
     Twitter,
-    UserPlus,
     Users,
     Zap,
 } from 'lucide-react';
@@ -295,7 +293,9 @@ function FAQItem({
                 onClick={() => setIsOpen(!isOpen)}
                 className="flex w-full items-center justify-between p-4 text-left transition-colors hover:bg-slate-50 sm:p-6"
             >
-                <span className="pr-4 text-sm font-semibold text-slate-800 sm:text-base">{question}</span>
+                <span className="pr-4 text-sm font-semibold text-slate-800 sm:text-base">
+                    {question}
+                </span>
                 <ChevronDown
                     className={`h-5 w-5 text-slate-400 transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`}
                 />
@@ -350,24 +350,10 @@ export default function Welcome({
 }: {
     canRegister?: boolean;
 }) {
-    const { auth } = usePage<SharedData>().props;
-    const [isScrolled, setIsScrolled] = useState(false);
-
     // Stats counters
     const users = useCounter(5000, 2000);
     const orders = useCounter(100000, 2500);
-    const platforms = useCounter(50, 1500);
-
-    useEffect(() => {
-        const handleScroll = () => {
-            setIsScrolled(window.scrollY > 50);
-        };
-
-        window.addEventListener('scroll', handleScroll);
-        return () => window.removeEventListener('scroll', handleScroll);
-    }, []);
-
-    // Start counters when component mounts
+    const platforms = useCounter(50, 1500); // Start counters when component mounts
     useEffect(() => {
         const timer = setTimeout(() => {
             users.start();
@@ -432,110 +418,8 @@ export default function Welcome({
             </Head>
 
             <div className="min-h-screen bg-slate-50">
-                {/* Navbar - Fixed at top */}
-                <nav
-                    className={`fixed top-0 right-0 left-0 z-50 transition-all duration-300 ${
-                        isScrolled
-                            ? 'border-b border-slate-200 bg-white/95 shadow-sm backdrop-blur-md'
-                            : 'bg-transparent'
-                    }`}
-                >
-                    <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 md:px-6 md:py-4">
-                        <Link
-                            href="/"
-                            className="group flex items-center gap-2"
-                        >
-                            <div
-                                className={`flex h-9 w-9 items-center justify-center rounded-lg transition-all duration-300 group-hover:scale-105 ${
-                                    isScrolled
-                                        ? 'bg-[#a8dadc]'
-                                        : 'bg-white/20 backdrop-blur-sm'
-                                }`}
-                            >
-                                <Sparkles
-                                    className={`h-5 w-5 ${isScrolled ? 'text-white' : 'text-white'}`}
-                                />
-                            </div>
-                            <span
-                                className={`text-lg font-bold ${isScrolled ? 'text-slate-800' : 'text-white'}`}
-                            >
-                                SMM Panel
-                            </span>
-                        </Link>
-
-                        {/* Center Menu */}
-                        <div className="hidden items-center gap-8 md:flex">
-                            {[
-                                { name: 'Beranda', href: '#' },
-                                { name: 'Layanan', href: '#pricing' },
-                                { name: 'Pertanyaan Umum', href: '#' },
-                                { name: 'Kontak', href: '#' },
-                            ].map((item) => (
-                                <a
-                                    key={item.name}
-                                    href={item.href}
-                                    className={`text-sm font-semibold transition-all duration-300 hover:scale-105 ${
-                                        isScrolled
-                                            ? 'text-slate-600 hover:text-[#457b9d]'
-                                            : 'text-white/90 hover:text-white'
-                                    }`}
-                                >
-                                    {item.name}
-                                </a>
-                            ))}
-                        </div>
-
-                        {/* Auth Buttons */}
-                        <div className="flex items-center gap-2 md:gap-4">
-                            {auth.user ? (
-                                <Link
-                                    href={dashboard().url}
-                                    className={`group relative flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-bold transition-all duration-200 active:translate-y-1 md:px-6 md:py-2.5 ${
-                                        isScrolled
-                                            ? 'bg-[#457b9d] text-white shadow-[0_4px_0_rgb(45,76,98)] hover:bg-[#3d6a87] active:shadow-none'
-                                            : 'bg-white text-slate-800 shadow-[0_4px_0_rgb(200,200,200)] hover:bg-slate-100 active:shadow-none'
-                                    }`}
-                                >
-                                    <LayoutDashboard className="h-4 w-4" />
-                                    <span className="hidden sm:inline">
-                                        Dashboard
-                                    </span>
-                                </Link>
-                            ) : (
-                                <>
-                                    <Link
-                                        href={login().url}
-                                        className={`group relative flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-bold transition-all duration-200 active:translate-y-1 md:gap-2 md:px-5 md:py-2.5 ${
-                                            isScrolled
-                                                ? 'bg-slate-100 text-slate-700 shadow-[0_4px_0_rgb(200,200,200)] hover:bg-slate-200 active:shadow-none'
-                                                : 'bg-white/20 text-white shadow-[0_4px_0_rgba(255,255,255,0.2)] backdrop-blur-sm hover:bg-white/30 active:shadow-none'
-                                        }`}
-                                    >
-                                        <LogIn className="h-4 w-4" />
-                                        <span className="hidden sm:inline">
-                                            Masuk
-                                        </span>
-                                    </Link>
-                                    {canRegister && (
-                                        <Link
-                                            href={register().url}
-                                            className={`group relative flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-bold transition-all duration-200 active:translate-y-1 md:gap-2 md:px-6 md:py-2.5 ${
-                                                isScrolled
-                                                    ? 'bg-[#457b9d] text-white shadow-[0_4px_0_rgb(45,76,98)] hover:bg-[#3d6a87] active:shadow-none'
-                                                    : 'bg-white text-slate-800 shadow-[0_4px_0_rgb(200,200,200)] hover:bg-white/90 active:shadow-none'
-                                            }`}
-                                        >
-                                            <UserPlus className="h-4 w-4" />
-                                            <span className="hidden sm:inline">
-                                                Daftar
-                                            </span>
-                                        </Link>
-                                    )}
-                                </>
-                            )}
-                        </div>
-                    </div>
-                </nav>
+                {/* Navbar */}
+                <LandingNavbar canRegister={canRegister} />
 
                 {/* Hero Section - With Gradient Background & Particles */}
                 <section className="relative min-h-screen overflow-hidden bg-linear-to-br from-[#a8dadc] via-[#81c8cc] to-[#457b9d] px-6 pt-32 pb-48">
@@ -895,82 +779,8 @@ export default function Welcome({
                     </div>
                 </section>
 
-                {/* Footer - Dark Slate Background */}
-                <footer className="relative z-10 bg-slate-800 px-4 py-10 sm:px-6 sm:py-14">
-                    <div className="mx-auto max-w-6xl">
-                        <div className="mb-8 flex flex-col justify-between gap-8 sm:mb-10 sm:gap-10 md:flex-row">
-                            <div className="max-w-sm">
-                                <Link
-                                    href="/"
-                                    className="mb-4 flex items-center gap-2"
-                                >
-                                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#a8dadc]">
-                                        <Sparkles className="h-4 w-4 text-white" />
-                                    </div>
-                                    <span className="text-lg font-bold text-white">
-                                        SMM Panel
-                                    </span>
-                                </Link>
-                                <p className="text-sm leading-relaxed text-slate-400">
-                                    Panel SMM terpercaya untuk mengembangkan
-                                    media sosial Anda dengan layanan terbaik dan
-                                    proses otomatis.
-                                </p>
-                            </div>
-
-                            <div className="flex flex-col gap-10 md:flex-row md:gap-24">
-                                <div>
-                                    <h4 className="mb-4 text-sm font-semibold text-white">
-                                        Layanan & Informasi
-                                    </h4>
-                                    <ul className="space-y-2.5">
-                                        {[
-                                            'SEWA SMM',
-                                            'Keuntungan Join',
-                                            'Contoh Pengisian Target',
-                                            'Penjelasan Status Pesanan',
-                                        ].map((item) => (
-                                            <li key={item}>
-                                                <a
-                                                    href="#"
-                                                    className="text-sm text-slate-400 transition-colors duration-300 hover:text-[#a8dadc]"
-                                                >
-                                                    {item}
-                                                </a>
-                                            </li>
-                                        ))}
-                                    </ul>
-                                </div>
-
-                                <div>
-                                    <h4 className="mb-4 text-sm font-semibold text-white">
-                                        Bantuan
-                                    </h4>
-                                    <ul className="space-y-2.5">
-                                        {[
-                                            'Pertanyaan Umum',
-                                            'Kontak',
-                                            'Ketentuan Layanan',
-                                        ].map((item) => (
-                                            <li key={item}>
-                                                <a
-                                                    href="#"
-                                                    className="text-sm text-slate-400 transition-colors duration-300 hover:text-[#a8dadc]"
-                                                >
-                                                    {item}
-                                                </a>
-                                            </li>
-                                        ))}
-                                    </ul>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="border-t border-slate-700 pt-8 text-center text-sm text-slate-500">
-                            © 2026 SMM Panel. Hak cipta dilindungi.
-                        </div>
-                    </div>
-                </footer>
+                {/* Footer */}
+                <LandingFooter />
             </div>
         </>
     );
