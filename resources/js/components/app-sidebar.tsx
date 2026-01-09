@@ -76,7 +76,7 @@ const mainNavItems: NavItem[] = [
     },
     {
         title: 'Riwayat Pemesanan',
-        href: '/orders/history',
+        href: '/orders',
         icon: History,
     },
     {
@@ -142,7 +142,7 @@ const accountNavItems: NavItem[] = [
 const sitemapNavItems: NavItem[] = [
     {
         title: 'Kontak Kami',
-        href: '/contact',
+        href: '/contact-us',
         icon: Phone,
     },
     {
@@ -152,27 +152,27 @@ const sitemapNavItems: NavItem[] = [
     },
     {
         title: 'Ketentuan Layanan',
-        href: '/terms',
+        href: '/terms-of-service',
         icon: ScrollText,
     },
     {
         title: 'Sewa SMM',
-        href: '/rent-smm',
+        href: '/sewa-smm',
         icon: Server,
     },
     {
         title: 'Contoh Pengisian Target',
-        href: '/target-examples',
+        href: '/contoh-pengisian-target',
         icon: Target,
     },
     {
         title: 'Penjelasan Status Pesanan',
-        href: '/order-status-guide',
+        href: '/penjelasan-status-pesanan',
         icon: ClipboardList,
     },
     {
         title: 'Keuntungan Join Medanpedia',
-        href: '/benefits',
+        href: '/keuntungan-join-medanpedia',
         icon: Gift,
     },
     {
