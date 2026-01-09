@@ -35,11 +35,11 @@ export default function Register() {
             `}</style>
 
             <div className="w-full max-w-[440px]">
-                <div className="overflow-hidden rounded-4xl bg-white px-8 py-10 shadow-2xl shadow-slate-200/50 sm:px-12 sm:py-12">
+                <div className="overflow-hidden rounded-[2.5rem] bg-white px-8 py-10 shadow-2xl shadow-slate-200/50 sm:px-12 sm:py-12">
                     {/* Header/Logo */}
                     <div className="mb-10 flex flex-col items-center">
                         <div className="mb-4 flex items-center gap-2">
-                            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-600 p-2 shadow-lg shadow-indigo-100">
+                            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#02c39a] p-2 shadow-lg shadow-[#02c39a]/10">
                                 <AppLogoIcon className="h-full w-full fill-white" />
                             </div>
                             <span className="text-2xl font-bold tracking-tight text-[#1e293b]">
@@ -75,7 +75,7 @@ export default function Register() {
                                     }
                                     required
                                     autoFocus
-                                    className="h-11 border border-slate-200 bg-slate-50 px-4 text-sm text-slate-900 transition-all focus:border-indigo-500 focus:bg-white focus:ring-0 focus:outline-none focus-visible:ring-0"
+                                    className="h-11 border border-slate-200 bg-slate-50 px-4 text-sm text-slate-900 transition-all focus:border-[#02c39a] focus:bg-white focus:ring-0 focus:outline-none focus-visible:ring-0"
                                 />
                                 <InputError message={errors.name} />
                             </div>
@@ -96,7 +96,7 @@ export default function Register() {
                                     }
                                     required
                                     placeholder="Username"
-                                    className="h-11 border border-slate-200 bg-slate-50 px-4 text-sm text-slate-900 transition-all focus:border-indigo-500 focus:bg-white focus:ring-0 focus:outline-none focus-visible:ring-0"
+                                    className="h-11 border border-slate-200 bg-slate-50 px-4 text-sm text-slate-900 transition-all focus:border-[#02c39a] focus:bg-white focus:ring-0 focus:outline-none focus-visible:ring-0"
                                 />
                                 <InputError message={errors.username} />
                             </div>
@@ -117,7 +117,7 @@ export default function Register() {
                                     setData('email', e.target.value)
                                 }
                                 required
-                                className="h-11 border border-slate-200 bg-slate-50 px-4 text-sm text-slate-900 transition-all focus:border-indigo-500 focus:bg-white focus:ring-0 focus:outline-none focus-visible:ring-0"
+                                className="h-11 border border-slate-200 bg-slate-50 px-4 text-sm text-slate-900 transition-all focus:border-[#02c39a] focus:bg-white focus:ring-0 focus:outline-none focus-visible:ring-0"
                             />
                             <InputError message={errors.email} />
                         </div>
@@ -138,7 +138,7 @@ export default function Register() {
                                         setData('password', e.target.value)
                                     }
                                     required
-                                    className="h-11 border border-slate-200 bg-slate-50 px-4 text-sm text-slate-900 transition-all focus:border-indigo-500 focus:bg-white focus:ring-0 focus:outline-none focus-visible:ring-0"
+                                    className="h-11 border border-slate-200 bg-slate-50 px-4 text-sm text-slate-900 transition-all focus:border-[#02c39a] focus:bg-white focus:ring-0 focus:outline-none focus-visible:ring-0"
                                 />
                                 <InputError message={errors.password} />
                             </div>
@@ -161,7 +161,7 @@ export default function Register() {
                                         )
                                     }
                                     required
-                                    className="h-11 border border-slate-200 bg-slate-50 px-4 text-sm text-slate-900 transition-all focus:border-indigo-500 focus:bg-white focus:ring-0 focus:outline-none focus-visible:ring-0"
+                                    className="h-11 border border-slate-200 bg-slate-50 px-4 text-sm text-slate-900 transition-all focus:border-[#02c39a] focus:bg-white focus:ring-0 focus:outline-none focus-visible:ring-0"
                                 />
                                 <InputError
                                     message={errors.password_confirmation}
@@ -174,7 +174,7 @@ export default function Register() {
                                 Dengan mendaftar berarti Anda setuju dengan{' '}
                                 <Link
                                     href="/terms"
-                                    className="font-bold text-[#6366f1] hover:underline"
+                                    className="font-bold text-[#02c39a] hover:underline"
                                 >
                                     Ketentuan Layanan
                                 </Link>
@@ -182,7 +182,7 @@ export default function Register() {
                             </p>
                             <Button
                                 type="submit"
-                                className="h-12 w-full rounded-2xl bg-[#6366f1] text-[15px] font-bold text-white shadow-lg shadow-indigo-100/50 transition-all hover:bg-[#5558e6] hover:shadow-xl active:scale-[0.98]"
+                                className="h-12 w-full rounded-2xl bg-[#02c39a] text-[15px] font-bold text-white shadow-lg shadow-[#02c39a]/20 transition-all hover:bg-[#00a884] hover:shadow-xl active:scale-[0.98]"
                                 disabled={processing}
                             >
                                 {processing ? (
@@ -195,7 +195,7 @@ export default function Register() {
                                 Sudah Mempunyai Akun?{' '}
                                 <Link
                                     href={login()}
-                                    className="font-bold text-[#6366f1] transition-colors hover:text-[#5558e6] hover:underline"
+                                    className="font-bold text-[#02c39a] transition-colors hover:text-[#00a884] hover:underline"
                                 >
                                     Masuk
                                 </Link>
@@ -205,7 +205,8 @@ export default function Register() {
                 </div>
 
                 <div className="mt-8 text-center text-[11px] font-medium tracking-wide text-slate-400 uppercase">
-                    © 2028 Medanpedia - SMM Panel Indonesia Terbaik dan Termudah
+                    © {new Date().getFullYear()} Medanpedia - SMM Panel
+                    Indonesia Terbaik dan Termudah
                 </div>
             </div>
         </div>

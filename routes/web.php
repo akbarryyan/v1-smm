@@ -38,6 +38,48 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboard', function () {
         return Inertia::render('dashboard');
     })->name('dashboard');
+
+    Route::prefix('rankings')->group(function () {
+        Route::get('orders', function () {
+            return Inertia::render('rankings/orders');
+        })->name('rankings.orders');
+
+        Route::get('deposits', function () {
+            return Inertia::render('rankings/deposits');
+        })->name('rankings.deposits');
+
+        Route::get('services', function () {
+            return Inertia::render('rankings/services');
+        })->name('rankings.services');
+    });
+
+    Route::get('tickets', function () {
+        return Inertia::render('tickets');
+    })->name('tickets');
+
+    Route::get('news', function () {
+        return Inertia::render('news');
+    })->name('news');
+
+    Route::get('service-updates', function () {
+        return Inertia::render('service-updates');
+    })->name('service-updates');
+
+    Route::get('service-monitoring', function () {
+        return Inertia::render('service-monitoring');
+    })->name('service-monitoring');
+
+    Route::get('settings/profile', function () {
+        return Inertia::render('settings/profile');
+    })->name('settings.profile');
+
+    Route::get('balance/mutations', function () {
+        return Inertia::render('balance/mutations');
+    })->name('balance.mutations');
+
+    Route::get('login-logs', function () {
+        return Inertia::render('login-logs');
+    })->name('login-logs');
 });
 
 require __DIR__.'/settings.php';
