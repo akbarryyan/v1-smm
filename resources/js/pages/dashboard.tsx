@@ -20,8 +20,19 @@ const breadcrumbs: BreadcrumbItem[] = [
 ];
 
 export default function Dashboard() {
-    const { auth } = usePage<SharedData>().props;
+    const { auth, monthlyUsage } = usePage<
+        SharedData & { monthlyUsage: number }
+    >().props;
     const [showAlert, setShowAlert] = useState(true);
+
+    const formatCurrency = (amount: number) => {
+        return new Intl.NumberFormat('id-ID', {
+            style: 'currency',
+            currency: 'IDR',
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 0,
+        }).format(amount);
+    };
 
     const recommendedServices = [
         {
@@ -172,7 +183,9 @@ export default function Dashboard() {
                                         Sisa Saldo Anda
                                     </p>
                                     <h3 className="text-xl font-bold text-slate-900 transition-colors group-hover:text-[#02c39a]">
-                                        Rp 164
+                                        {formatCurrency(
+                                            Number(auth.user.balance),
+                                        )}
                                     </h3>
                                 </div>
                             </div>
@@ -192,7 +205,7 @@ export default function Dashboard() {
                                         Pesanan Bulan Ini
                                     </p>
                                     <h3 className="text-xl font-bold text-slate-900 transition-colors group-hover:text-blue-600">
-                                        Rp 364
+                                        {formatCurrency(monthlyUsage)}
                                     </h3>
                                 </div>
                             </div>

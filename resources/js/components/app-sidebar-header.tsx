@@ -119,7 +119,12 @@ export function AppSidebarHeader({
                                         Sisa Saldo :
                                     </span>
                                     <span className="text-sm font-bold text-slate-800">
-                                        Rp 164
+                                        {new Intl.NumberFormat('id-ID', {
+                                            style: 'currency',
+                                            currency: 'IDR',
+                                            minimumFractionDigits: 0,
+                                            maximumFractionDigits: 0,
+                                        }).format(Number(auth.user.balance))}
                                     </span>
                                 </div>
                             </div>

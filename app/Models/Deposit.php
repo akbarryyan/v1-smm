@@ -12,6 +12,8 @@ class Deposit extends Model
 
     protected $guarded = ['id'];
 
+    protected $appends = ['status_label', 'status_color'];
+
     protected $casts = [
         'amount' => 'decimal:2',
         'fee' => 'decimal:2',

@@ -1,5 +1,5 @@
 import AppLayout from '@/layouts/app-layout';
-import { Head } from '@inertiajs/react';
+import { Head, Link, useForm, usePage } from '@inertiajs/react';
 import {
     AlertCircle,
     CheckCircle2,
@@ -21,23 +21,59 @@ const breadcrumbs = [
     },
 ];
 
-const mockTickets = [
-    {
-        id: '38700',
-        subject: 'Pesanan',
-        status: 'Answered',
-        updated_at: '03 Februari 2025 06:57:11',
-    },
-    {
-        id: '38508',
-        subject: 'Pesanan',
-        status: 'Answered',
-        updated_at: '02 Februari 2025 18:21:27',
-    },
-];
+interface Ticket {
+    id: number;
+    subject: string;
+    status: string;
+    status_label: string;
+    status_color: string;
+    created_at: string;
+    updated_at: string;
+}
+
+interface PaginatedTickets {
+    data: Ticket[];
+    current_page: number;
+    last_page: number;
+    links: {
+        url: string | null;
+        label: string;
+        active: boolean;
+    }[];
+    total: number;
+}
 
 export default function Tickets() {
+    const { tickets, flash } = usePage<{
+        tickets: PaginatedTickets;
+        flash: { success?: string };
+    }>().props;
     const [showForm, setShowForm] = useState(false);
+
+    const { data, setData, post, processing, errors, reset } = useForm({
+        subject: '',
+        message: '',
+    });
+
+    const handleSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        post('/tickets', {
+            onSuccess: () => {
+                setShowForm(false);
+                reset();
+            },
+        });
+    };
+
+    const formatDate = (dateString: string) => {
+        return new Date(dateString).toLocaleDateString('id-ID', {
+            day: 'numeric',
+            month: 'long',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+        });
+    };
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
@@ -54,6 +90,15 @@ export default function Tickets() {
                         pertanyaan.
                     </p>
                 </div>
+
+                {flash.success && (
+                    <div className="relative mb-2 rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-600">
+                        <div className="flex items-center gap-2">
+                            <CheckCircle2 className="h-4 w-4" />
+                            {flash.success}
+                        </div>
+                    </div>
+                )}
 
                 <div className="grid grid-cols-1 items-start gap-6 xl:grid-cols-12">
                     {/* Kirim Tiket Form (Hidden by default) */}
@@ -77,23 +122,35 @@ export default function Tickets() {
                                     </button>
                                 </div>
 
-                                <div className="space-y-5 p-6">
+                                <form
+                                    onSubmit={handleSubmit}
+                                    className="space-y-5 p-6"
+                                >
                                     <div className="space-y-1.5">
                                         <label className="text-[11px] font-bold tracking-wider text-slate-400 uppercase">
                                             Subjek
                                         </label>
                                         <div className="relative">
-                                            <select className="h-11 w-full appearance-none rounded-xl border-slate-200 bg-slate-50 px-4 text-sm font-medium text-slate-700 ring-offset-2 transition-all outline-none focus:border-[#02c39a] focus:bg-white focus:ring-2 focus:ring-[#02c39a]/20">
+                                            <select
+                                                value={data.subject}
+                                                onChange={(e) =>
+                                                    setData(
+                                                        'subject',
+                                                        e.target.value,
+                                                    )
+                                                }
+                                                className="h-11 w-full appearance-none rounded-xl border-slate-200 bg-slate-50 px-4 text-sm font-medium text-slate-700 ring-offset-2 transition-all outline-none focus:border-[#02c39a] focus:bg-white focus:ring-2 focus:ring-[#02c39a]/20"
+                                            >
                                                 <option value="">
                                                     Pilih...
                                                 </option>
-                                                <option value="order">
+                                                <option value="Masalah Pesanan">
                                                     Masalah Pesanan
                                                 </option>
-                                                <option value="deposit">
+                                                <option value="Masalah Deposit">
                                                     Masalah Deposit
                                                 </option>
-                                                <option value="other">
+                                                <option value="Lainnya">
                                                     Lainnya
                                                 </option>
                                             </select>
@@ -101,6 +158,11 @@ export default function Tickets() {
                                                 <Plus className="h-4 w-4 rotate-45" />
                                             </div>
                                         </div>
+                                        {errors.subject && (
+                                            <p className="text-xs text-red-500">
+                                                {errors.subject}
+                                            </p>
+                                        )}
                                     </div>
 
                                     <div className="space-y-1.5">
@@ -108,10 +170,22 @@ export default function Tickets() {
                                             Pesan
                                         </label>
                                         <textarea
+                                            value={data.message}
+                                            onChange={(e) =>
+                                                setData(
+                                                    'message',
+                                                    e.target.value,
+                                                )
+                                            }
                                             placeholder="Detail kendala Anda..."
                                             rows={4}
                                             className="w-full resize-none rounded-xl border-slate-200 bg-slate-50 p-4 text-sm font-medium text-slate-700 ring-offset-2 transition-all outline-none focus:border-[#02c39a] focus:bg-white focus:ring-2 focus:ring-[#02c39a]/20"
                                         />
+                                        {errors.message && (
+                                            <p className="text-xs text-red-500">
+                                                {errors.message}
+                                            </p>
+                                        )}
                                     </div>
 
                                     <div className="space-y-1.5">
@@ -142,11 +216,21 @@ export default function Tickets() {
                                         </div>
                                     </div>
 
-                                    <button className="group relative flex w-full items-center justify-center gap-2 rounded-2xl bg-[#02c39a] py-3.5 text-sm font-bold text-white shadow-[0_4px_0_rgb(0,168,132)] transition-all hover:translate-y-[2px] hover:bg-[#00a884] hover:shadow-[0_2px_0_rgb(0,168,132)] active:translate-y-1 active:shadow-none">
-                                        <Send className="h-4 w-4" />
-                                        Kirim Tiket Sekarang
+                                    <button
+                                        type="submit"
+                                        disabled={processing}
+                                        className="group relative flex w-full items-center justify-center gap-2 rounded-2xl bg-[#02c39a] py-3.5 text-sm font-bold text-white shadow-[0_4px_0_rgb(0,168,132)] transition-all hover:translate-y-[2px] hover:bg-[#00a884] hover:shadow-[0_2px_0_rgb(0,168,132)] active:translate-y-1 active:shadow-none disabled:translate-y-1 disabled:opacity-50 disabled:shadow-none"
+                                    >
+                                        {processing ? (
+                                            'Mengirim...'
+                                        ) : (
+                                            <>
+                                                <Send className="h-4 w-4" />
+                                                Kirim Tiket Sekarang
+                                            </>
+                                        )}
                                     </button>
-                                </div>
+                                </form>
                             </div>
                         </div>
                     )}
@@ -216,83 +300,105 @@ export default function Tickets() {
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-slate-50">
-                                        {mockTickets.map((ticket) => (
-                                            <tr
-                                                key={ticket.id}
-                                                className="group transition-colors hover:bg-slate-50/50"
-                                            >
-                                                <td className="px-8 py-5">
-                                                    <span className="text-sm font-bold text-slate-600">
-                                                        #{ticket.id}
-                                                    </span>
-                                                </td>
-                                                <td className="px-8 py-5">
-                                                    <div className="flex items-center gap-2">
-                                                        <FileText className="h-4 w-4 text-slate-300" />
-                                                        <span className="cursor-pointer text-sm font-bold text-[#02c39a] hover:underline">
-                                                            {ticket.subject}
-                                                        </span>
+                                        {tickets.data.length === 0 ? (
+                                            <tr>
+                                                <td
+                                                    colSpan={5}
+                                                    className="px-8 py-10 text-center"
+                                                >
+                                                    <div className="flex flex-col items-center justify-center">
+                                                        <div className="mb-4 rounded-full bg-slate-50 p-6">
+                                                            <AlertCircle className="h-12 w-12 text-slate-200" />
+                                                        </div>
+                                                        <p className="text-sm font-bold text-slate-400">
+                                                            Belum ada tiket
+                                                            bantuan
+                                                        </p>
                                                     </div>
-                                                </td>
-                                                <td className="px-8 py-5">
-                                                    <span
-                                                        className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[10px] font-black tracking-wider uppercase ${
-                                                            ticket.status ===
-                                                            'Answered'
-                                                                ? 'bg-emerald-50 text-emerald-600 ring-1 ring-emerald-100'
-                                                                : 'bg-slate-100 text-slate-500 ring-1 ring-slate-200'
-                                                        }`}
-                                                    >
-                                                        <CheckCircle2 className="h-3 w-3" />
-                                                        {ticket.status}
-                                                    </span>
-                                                </td>
-                                                <td className="px-8 py-5">
-                                                    <div className="flex items-center gap-2 text-xs font-semibold text-slate-400">
-                                                        <Clock className="h-3.5 w-3.5" />
-                                                        {ticket.updated_at}
-                                                    </div>
-                                                </td>
-                                                <td className="px-8 py-5">
-                                                    <button className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 text-slate-400 transition-all hover:bg-[#02c39a] hover:text-white active:scale-95">
-                                                        <MessageSquare className="h-4 w-4" />
-                                                    </button>
                                                 </td>
                                             </tr>
-                                        ))}
+                                        ) : (
+                                            tickets.data.map((ticket) => (
+                                                <tr
+                                                    key={ticket.id}
+                                                    className="group transition-colors hover:bg-slate-50/50"
+                                                >
+                                                    <td className="px-8 py-5">
+                                                        <span className="text-sm font-bold text-slate-600">
+                                                            #{ticket.id}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-8 py-5">
+                                                        <div className="flex items-center gap-2">
+                                                            <FileText className="h-4 w-4 text-slate-300" />
+                                                            <span className="cursor-pointer text-sm font-bold text-[#02c39a] hover:underline">
+                                                                {ticket.subject}
+                                                            </span>
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-8 py-5">
+                                                        <span
+                                                            className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[10px] font-black tracking-wider uppercase bg-${ticket.status_color}-50 text-${ticket.status_color}-600 ring-1 ring-${ticket.status_color}-100`}
+                                                        >
+                                                            <CheckCircle2 className="h-3 w-3" />
+                                                            {
+                                                                ticket.status_label
+                                                            }
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-8 py-5">
+                                                        <div className="flex items-center gap-2 text-xs font-semibold text-slate-400">
+                                                            <Clock className="h-3.5 w-3.5" />
+                                                            {formatDate(
+                                                                ticket.updated_at,
+                                                            )}
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-8 py-5">
+                                                        <Link
+                                                            href={`/tickets/${ticket.id}`}
+                                                            className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 text-slate-400 transition-all hover:bg-[#02c39a] hover:text-white active:scale-95"
+                                                        >
+                                                            <MessageSquare className="h-4 w-4" />
+                                                        </Link>
+                                                    </td>
+                                                </tr>
+                                            ))
+                                        )}
                                     </tbody>
                                 </table>
                             </div>
 
-                            {/* Empty State Illustration (if no tickets) */}
-                            {mockTickets.length === 0 && (
-                                <div className="flex flex-col items-center justify-center py-20">
-                                    <div className="mb-4 rounded-full bg-slate-50 p-6">
-                                        <AlertCircle className="h-12 w-12 text-slate-200" />
-                                    </div>
-                                    <p className="text-sm font-bold text-slate-400">
-                                        Belum ada tiket bantuan
+                            {/* Pagination */}
+                            {tickets.data.length > 0 && (
+                                <div className="flex items-center justify-between border-t border-slate-100 bg-slate-50/30 px-8 py-4">
+                                    <p className="text-[11px] font-bold tracking-widest text-slate-400 uppercase">
+                                        Showing {tickets.data.length} Tickets
                                     </p>
+                                    <div className="flex gap-2">
+                                        {tickets.links.map((link, i) =>
+                                            link.url ? (
+                                                <Link
+                                                    key={i}
+                                                    href={link.url}
+                                                    className={`h-8 rounded-lg px-3 text-xs font-bold ${link.active ? 'bg-[#02c39a] text-white shadow-sm' : 'border border-slate-200 bg-white text-slate-400 disabled:opacity-50'}`}
+                                                    dangerouslySetInnerHTML={{
+                                                        __html: link.label,
+                                                    }}
+                                                />
+                                            ) : (
+                                                <span
+                                                    key={i}
+                                                    className="flex h-8 items-center rounded-lg border border-slate-200 bg-slate-50 px-3 text-xs font-bold text-slate-300 opacity-50"
+                                                    dangerouslySetInnerHTML={{
+                                                        __html: link.label,
+                                                    }}
+                                                />
+                                            ),
+                                        )}
+                                    </div>
                                 </div>
                             )}
-
-                            {/* Pagination */}
-                            <div className="flex items-center justify-between border-t border-slate-100 bg-slate-50/30 px-8 py-4">
-                                <p className="text-[11px] font-bold tracking-widest text-slate-400 uppercase">
-                                    Showing 2 Tickets
-                                </p>
-                                <div className="flex gap-2">
-                                    <button className="h-8 rounded-lg border border-slate-200 bg-white px-3 text-xs font-bold text-slate-400 disabled:opacity-50">
-                                        Prev
-                                    </button>
-                                    <button className="h-8 rounded-lg bg-[#02c39a] px-3 text-xs font-bold text-white shadow-sm">
-                                        1
-                                    </button>
-                                    <button className="h-8 rounded-lg border border-slate-200 bg-white px-3 text-xs font-bold text-slate-400 disabled:opacity-50">
-                                        Next
-                                    </button>
-                                </div>
-                            </div>
                         </div>
                     </div>
                 </div>

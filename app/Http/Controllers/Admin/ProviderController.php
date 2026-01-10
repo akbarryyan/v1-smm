@@ -228,12 +228,15 @@ class ProviderController extends Controller
                         // Calculate price with margin
                         $finalPrice = $provider->calculatePriceWithMargin($originalPrice, $margin, $marginType);
 
-                        Service::updateOrCreate(
-                            [
+                        $service = Service::where('provider_id', $provider->id)
+                                          ->where('provider_service_id', $serviceData['id'])
+                                          ->first();
+
+                        if (!$service) {
+                            // New Service
+                            $service = Service::create([
                                 'provider_id' => $provider->id, 
-                                'provider_service_id' => $serviceData['id']
-                            ],
-                            [
+                                'provider_service_id' => $serviceData['id'],
                                 'name' => $serviceData['name'] ?? 'Unknown Service',
                                 'category' => $serviceData['category'] ?? 'Uncategorized',
                                 'type' => $serviceData['type'] ?? 'default',
@@ -245,8 +248,55 @@ class ProviderController extends Controller
                                 'description' => $serviceData['description'] ?? null,
                                 'average_time' => $serviceData['average_time'] ?? null,
                                 'is_active' => true,
-                            ]
-                        );
+                            ]);
+
+                            \App\Models\ServiceUpdate::create([
+                                'service_id' => $service->id,
+                                'service_name' => $service->name,
+                                'provider_service_id' => $service->provider_service_id,
+                                'type' => 'Layanan Baru',
+                                'description' => 'Layanan baru berhasil ditambahkan.',
+                                'new_price' => $finalPrice,
+                            ]);
+                        } else {
+                            // Existing Service - Check Updates
+                            $oldPrice = $service->price;
+                            
+                            $service->name = $serviceData['name'] ?? 'Unknown Service';
+                            $service->category = $serviceData['category'] ?? 'Uncategorized';
+                            $service->type = $serviceData['type'] ?? 'default';
+                            $service->original_price = $originalPrice;
+                            $service->price = $finalPrice; // New price with potentially new margin
+                            $service->min = $serviceData['min'] ?? 1;
+                            $service->max = $serviceData['max'] ?? 10000;
+                            $service->refill = ($serviceData['refill'] ?? 0) == 1;
+                            $service->description = $serviceData['description'] ?? null;
+                            $service->average_time = $serviceData['average_time'] ?? null;
+                            $service->is_active = true;
+
+                            if ($service->isDirty('price')) {
+                                $type = $finalPrice > $oldPrice ? 'Harga Naik' : 'Harga Turun';
+                                \App\Models\ServiceUpdate::create([
+                                    'service_id' => $service->id,
+                                    'service_name' => $service->name,
+                                    'provider_service_id' => $service->provider_service_id,
+                                    'type' => $type,
+                                    'description' => "Harga layanan berubah dari Rp " . number_format($oldPrice, 0, ',', '.') . " menjadi Rp " . number_format($finalPrice, 0, ',', '.'),
+                                    'old_price' => $oldPrice,
+                                    'new_price' => $finalPrice,
+                                ]);
+                            } elseif ($service->isDirty()) {
+                                \App\Models\ServiceUpdate::create([
+                                    'service_id' => $service->id,
+                                    'service_name' => $service->name,
+                                    'provider_service_id' => $service->provider_service_id,
+                                    'type' => 'Perubahan Data',
+                                    'description' => 'Informasi layanan diperbarui (Nama/Deskripsi/Min/Max dll).',
+                                ]);
+                            }
+
+                            $service->save();
+                        }
                         $synced++;
                     }
 

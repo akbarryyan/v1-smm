@@ -42,6 +42,14 @@ class Service extends Model
     }
 
     /**
+     * Get the orders for the service.
+     */
+    public function orders(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(Order::class);
+    }
+
+    /**
      * Calculate margin amount.
      */
     public function getMarginAttribute(): float

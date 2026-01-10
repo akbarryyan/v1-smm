@@ -1,5 +1,6 @@
 import AppLayout from '@/layouts/app-layout';
-import { Head } from '@inertiajs/react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
+import { debounce } from 'lodash';
 import {
     Activity,
     CheckCircle2,
@@ -10,6 +11,7 @@ import {
     Play,
     Timer,
 } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
 
 const breadcrumbs = [
     {
@@ -18,98 +20,75 @@ const breadcrumbs = [
     },
 ];
 
-const monitoringData = [
-    {
-        id: 1,
-        serviceId: '6119',
-        name: 'TikTok View [ Server 7 ] [ No Refill ] [ Max Unlimited ] [ Low Drop ] [ 10M/Day ]',
-        orderCount: '2,000',
-        startDate: '09 Januari 2026',
-        startTime: '23:12:32',
-        endDate: '09 Januari 2026',
-        endTime: '23:14:16',
-        processTime: '1 menit 44 detik',
-    },
-    {
-        id: 2,
-        serviceId: '6119',
-        name: 'TikTok View [ Server 7 ] [ No Refill ] [ Max Unlimited ] [ Low Drop ] [ 10M/Day ]',
-        orderCount: '2,000',
-        startDate: '09 Januari 2026',
-        startTime: '23:12:08',
-        endDate: '09 Januari 2026',
-        endTime: '23:14:19',
-        processTime: '2 menit 11 detik',
-    },
-    {
-        id: 3,
-        serviceId: '6119',
-        name: 'TikTok View [ Server 7 ] [ No Refill ] [ Max Unlimited ] [ Low Drop ] [ 10M/Day ]',
-        orderCount: '2,000',
-        startDate: '09 Januari 2026',
-        startTime: '23:11:39',
-        endDate: '09 Januari 2026',
-        endTime: '23:14:23',
-        processTime: '2 menit 44 detik',
-    },
-    {
-        id: 4,
-        serviceId: '6116',
-        name: 'TikTok View [ Server 6 ] [ 30 Days Refill ] [ Max Unlimited ] [ Instant Start ] [ 10M/Day ]',
-        orderCount: '1,000',
-        startDate: '09 Januari 2026',
-        startTime: '23:10:12',
-        endDate: '09 Januari 2026',
-        endTime: '23:14:30',
-        processTime: '4 menit 18 detik',
-    },
-    {
-        id: 5,
-        serviceId: '6137',
-        name: 'TikTok Save Server 7 [ Max Unlimited ] [ HQ - Drop 0% ] [ No Refill ] [ Instant Start ] [ 500K/days ]',
-        orderCount: '100',
-        startDate: '09 Januari 2026',
-        startTime: '23:08:07',
-        endDate: '09 Januari 2026',
-        endTime: '23:10:57',
-        processTime: '2 menit 50 detik',
-    },
-    {
-        id: 6,
-        serviceId: '5743',
-        name: 'Twitter Tweet Views Server 7 [ Max 10M ] [ Start: 0-1 Minutes ] [ 10M/days ]',
-        orderCount: '9,564',
-        startDate: '09 Januari 2026',
-        startTime: '23:07:55',
-        endDate: '09 Januari 2026',
-        endTime: '23:11:10',
-        processTime: '3 menit 15 detik',
-    },
-    {
-        id: 7,
-        serviceId: '6116',
-        name: 'TikTok View [ Server 6 ] [ 30 Days Refill ] [ Max Unlimited ] [ Instant Start ] [ 10M/Day ]',
-        orderCount: '400',
-        startDate: '09 Januari 2026',
-        startTime: '23:05:26',
-        endDate: '09 Januari 2026',
-        endTime: '23:08:03',
-        processTime: '2 menit 37 detik',
-    },
-    {
-        id: 8,
-        serviceId: '6116',
-        name: 'TikTok View [ Server 6 ] [ 30 Days Refill ] [ Max Unlimited ] [ Instant Start ] [ 10M/Day ]',
-        orderCount: '400',
-        startDate: '09 Januari 2026',
-        startTime: '23:04:38',
-        endDate: '09 Januari 2026',
-        endTime: '23:11:43',
-        processTime: '7 menit 5 detik',
-    },
-];
+interface MonitoringItem {
+    id: number;
+    serviceId: string;
+    name: string;
+    orderCount: string;
+    startDate: string;
+    startTime: string;
+    endDate: string;
+    endTime: string;
+    processTime: string;
+}
+
+interface PaginatedMonitoring {
+    data: MonitoringItem[];
+    current_page: number;
+    last_page: number;
+    links: {
+        url: string | null;
+        label: string;
+        active: boolean;
+    }[];
+    total: number;
+    from: number;
+    to: number;
+}
 
 export default function ServiceMonitoring() {
+    const { monitoringData, categories, serviceNames, filters } = usePage<{
+        monitoringData: PaginatedMonitoring;
+        categories: string[];
+        serviceNames: string[];
+        filters: { category?: string; service?: string };
+    }>().props;
+
+    const [category, setCategory] = useState(filters.category || '');
+    const [service, setService] = useState(filters.service || '');
+
+    // Debounce filter
+    const debouncedFilter = useMemo(
+        () =>
+            debounce((qCategory: string, qService: string) => {
+                router.get(
+                    '/service-monitoring',
+                    { category: qCategory, service: qService },
+                    { preserveState: true, replace: true },
+                );
+            }, 300),
+        [],
+    );
+
+    useEffect(() => {
+        if (
+            category !== (filters.category || '') ||
+            service !== (filters.service || '')
+        ) {
+            debouncedFilter(category, service);
+        }
+        return () => debouncedFilter.cancel();
+    }, [category, service, debouncedFilter, filters]);
+
+    // Handle filter button click (optional, if user prefers manual trigger, strictly speaking useEffect handles it, so button is just visual/extra or can be force refresh)
+    const handleFilter = () => {
+        router.get(
+            '/service-monitoring',
+            { category, service },
+            { preserveState: true, replace: true },
+        );
+    };
+
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Monitoring Layanan" />
@@ -147,13 +126,21 @@ export default function ServiceMonitoring() {
                                         Filter Kategori
                                     </label>
                                     <div className="group relative">
-                                        <select className="h-10 w-full cursor-pointer appearance-none rounded-xl border border-slate-200 bg-white px-4 text-xs font-bold text-slate-600 transition-all outline-none focus:border-[#02c39a] focus:ring-2 focus:ring-[#02c39a]/10">
-                                            <option>SEMUA KATEGORI</option>
-                                            <option>TIKTOK</option>
-                                            <option>INSTAGRAM</option>
-                                            <option>TWITTER</option>
-                                            <option>YOUTUBE</option>
-                                            <option>FACEBOOK</option>
+                                        <select
+                                            value={category}
+                                            onChange={(e) =>
+                                                setCategory(e.target.value)
+                                            }
+                                            className="h-10 w-full cursor-pointer appearance-none rounded-xl border border-slate-200 bg-white px-4 text-xs font-bold text-slate-600 transition-all outline-none focus:border-[#02c39a] focus:ring-2 focus:ring-[#02c39a]/10"
+                                        >
+                                            <option value="">
+                                                SEMUA KATEGORI
+                                            </option>
+                                            {categories.map((cat, idx) => (
+                                                <option key={idx} value={cat}>
+                                                    {cat}
+                                                </option>
+                                            ))}
                                         </select>
                                         <div className="pointer-events-none absolute top-1/2 right-4 -translate-y-1/2 text-slate-400">
                                             <ChevronDown className="h-4 w-4" />
@@ -167,15 +154,21 @@ export default function ServiceMonitoring() {
                                         Filter Layanan
                                     </label>
                                     <div className="group relative">
-                                        <select className="h-10 w-full cursor-pointer appearance-none rounded-xl border border-slate-200 bg-white px-4 text-xs font-bold text-slate-600 transition-all outline-none focus:border-[#02c39a] focus:ring-2 focus:ring-[#02c39a]/10">
-                                            <option>SEMUA LAYANAN</option>
-                                            <option>
-                                                TikTok View Server 6
+                                        <select
+                                            value={service}
+                                            onChange={(e) =>
+                                                setService(e.target.value)
+                                            }
+                                            className="h-10 w-full cursor-pointer appearance-none rounded-xl border border-slate-200 bg-white px-4 text-xs font-bold text-slate-600 transition-all outline-none focus:border-[#02c39a] focus:ring-2 focus:ring-[#02c39a]/10"
+                                        >
+                                            <option value="">
+                                                SEMUA LAYANAN
                                             </option>
-                                            <option>
-                                                TikTok View Server 7
-                                            </option>
-                                            <option>Twitter Tweet Views</option>
+                                            {serviceNames.map((svc, idx) => (
+                                                <option key={idx} value={svc}>
+                                                    {svc}
+                                                </option>
+                                            ))}
                                         </select>
                                         <div className="pointer-events-none absolute top-1/2 right-4 -translate-y-1/2 text-slate-400">
                                             <ChevronDown className="h-4 w-4" />
@@ -185,7 +178,10 @@ export default function ServiceMonitoring() {
 
                                 {/* Filter Button */}
                                 <div className="md:col-span-3">
-                                    <button className="flex h-10 w-full items-center justify-center gap-2 rounded-xl bg-[#02c39a] text-xs font-bold text-white shadow-[0_3px_0_rgb(0,168,132)] transition-all hover:translate-y-1px hover:bg-[#00a884] hover:shadow-[0_1px_0_rgb(0,168,132)] active:translate-y-[2px] active:shadow-none">
+                                    <button
+                                        onClick={handleFilter}
+                                        className="hover:translate-y-1px flex h-10 w-full items-center justify-center gap-2 rounded-xl bg-[#02c39a] text-xs font-bold text-white shadow-[0_3px_0_rgb(0,168,132)] transition-all hover:bg-[#00a884] hover:shadow-[0_1px_0_rgb(0,168,132)] active:translate-y-[2px] active:shadow-none"
+                                    >
                                         <Filter className="h-4 w-4" />
                                         Filter
                                     </button>
@@ -212,56 +208,68 @@ export default function ServiceMonitoring() {
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-50">
-                                    {monitoringData.map((item) => (
-                                        <tr
-                                            key={item.id}
-                                            className="group transition-colors hover:bg-slate-50/50"
-                                        >
-                                            <td className="px-5 py-3">
-                                                <div className="max-w-[350px]">
-                                                    <span className="block cursor-pointer text-xs leading-tight font-bold text-indigo-600 hover:underline">
-                                                        {item.serviceId} -{' '}
-                                                        {item.name}
-                                                    </span>
-                                                </div>
-                                            </td>
-                                            <td className="px-5 py-3 text-center">
-                                                <span className="text-xs font-black text-[#02c39a]">
-                                                    {item.orderCount}
-                                                </span>
-                                            </td>
-                                            <td className="px-5 py-3">
-                                                <div className="flex min-w-[100px] flex-col">
-                                                    <span className="text-xs font-bold text-slate-700">
-                                                        {item.startDate}
-                                                    </span>
-                                                    <div className="flex items-center gap-1 text-[9px] font-bold text-slate-400">
-                                                        <Play className="h-2.5 w-2.5 fill-slate-400" />
-                                                        {item.startTime}
-                                                    </div>
-                                                </div>
-                                            </td>
-                                            <td className="px-5 py-3">
-                                                <div className="flex min-w-[100px] flex-col">
-                                                    <span className="text-xs font-bold text-slate-700">
-                                                        {item.endDate}
-                                                    </span>
-                                                    <div className="flex items-center gap-1 text-[9px] font-bold text-slate-400">
-                                                        <CheckCircle2 className="h-2.5 w-2.5" />
-                                                        {item.endTime}
-                                                    </div>
-                                                </div>
-                                            </td>
-                                            <td className="px-5 py-3">
-                                                <div className="flex items-center gap-1.5">
-                                                    <Timer className="h-3 w-3 text-[#02c39a]" />
-                                                    <span className="text-xs font-bold text-[#02c39a]">
-                                                        {item.processTime}
-                                                    </span>
-                                                </div>
+                                    {monitoringData.data.length === 0 ? (
+                                        <tr>
+                                            <td
+                                                colSpan={5}
+                                                className="px-5 py-8 text-center text-xs font-bold text-slate-400"
+                                            >
+                                                Tidak ada data monitoring
+                                                ditemukan.
                                             </td>
                                         </tr>
-                                    ))}
+                                    ) : (
+                                        monitoringData.data.map((item) => (
+                                            <tr
+                                                key={item.id}
+                                                className="group transition-colors hover:bg-slate-50/50"
+                                            >
+                                                <td className="px-5 py-3">
+                                                    <div className="max-w-[350px]">
+                                                        <span className="block cursor-pointer text-xs leading-tight font-bold text-indigo-600 hover:underline">
+                                                            {item.serviceId} -{' '}
+                                                            {item.name}
+                                                        </span>
+                                                    </div>
+                                                </td>
+                                                <td className="px-5 py-3 text-center">
+                                                    <span className="text-xs font-black text-[#02c39a]">
+                                                        {item.orderCount}
+                                                    </span>
+                                                </td>
+                                                <td className="px-5 py-3">
+                                                    <div className="flex min-w-[100px] flex-col">
+                                                        <span className="text-xs font-bold text-slate-700">
+                                                            {item.startDate}
+                                                        </span>
+                                                        <div className="flex items-center gap-1 text-[9px] font-bold text-slate-400">
+                                                            <Play className="h-2.5 w-2.5 fill-slate-400" />
+                                                            {item.startTime}
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td className="px-5 py-3">
+                                                    <div className="flex min-w-[100px] flex-col">
+                                                        <span className="text-xs font-bold text-slate-700">
+                                                            {item.endDate}
+                                                        </span>
+                                                        <div className="flex items-center gap-1 text-[9px] font-bold text-slate-400">
+                                                            <CheckCircle2 className="h-2.5 w-2.5" />
+                                                            {item.endTime}
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td className="px-5 py-3">
+                                                    <div className="flex items-center gap-1.5">
+                                                        <Timer className="h-3 w-3 text-[#02c39a]" />
+                                                        <span className="text-xs font-bold text-[#02c39a]">
+                                                            {item.processTime}
+                                                        </span>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ))
+                                    )}
                                 </tbody>
                             </table>
                         </div>
@@ -269,26 +277,63 @@ export default function ServiceMonitoring() {
                         {/* Footer / Pagination */}
                         <div className="flex flex-col items-center justify-between gap-3 border-t border-slate-100 bg-slate-50/30 px-5 py-4 sm:flex-row">
                             <p className="order-2 text-[10px] font-bold tracking-widest text-slate-400 uppercase sm:order-1">
-                                Menampilkan {monitoringData.length} Data
-                                Monitoring
+                                Menampilkan {monitoringData.from || 0}-
+                                {monitoringData.to || 0} dari{' '}
+                                {monitoringData.total} Data Monitoring
                             </p>
 
-                            <div className="order-1 flex items-center gap-1.5 sm:order-2">
-                                <button className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-400 transition-all hover:bg-slate-50 active:scale-95">
-                                    <ChevronLeft className="h-4 w-4" />
-                                </button>
-                                <button className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#02c39a] text-xs font-bold text-white shadow-sm transition-all">
-                                    1
-                                </button>
-                                <button className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-xs font-bold text-slate-600 transition-all hover:border-[#02c39a] hover:text-[#02c39a]">
-                                    2
-                                </button>
-                                <button className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-xs font-bold text-slate-600 transition-all hover:border-[#02c39a] hover:text-[#02c39a]">
-                                    3
-                                </button>
-                                <button className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-400 transition-all hover:bg-slate-50 active:scale-95">
-                                    <ChevronRight className="h-4 w-4" />
-                                </button>
+                            <div className="order-1 flex flex-wrap justify-center gap-1 sm:order-2">
+                                {monitoringData.links.map((link, i) => {
+                                    // Clean up label
+                                    const label = link.label
+                                        .replace('&laquo;', '')
+                                        .replace('&raquo;', '')
+                                        .trim();
+                                    const isPrevious = label === 'Previous';
+                                    const isNext = label === 'Next';
+
+                                    let content;
+                                    if (isPrevious) {
+                                        content = (
+                                            <ChevronLeft className="h-4 w-4" />
+                                        );
+                                    } else if (isNext) {
+                                        content = (
+                                            <ChevronRight className="h-4 w-4" />
+                                        );
+                                    } else {
+                                        content = (
+                                            <span
+                                                dangerouslySetInnerHTML={{
+                                                    __html: link.label,
+                                                }}
+                                            />
+                                        );
+                                    }
+
+                                    return link.url ? (
+                                        <Link
+                                            key={i}
+                                            href={link.url}
+                                            className={`flex h-8 min-w-[32px] items-center justify-center rounded-lg px-2 text-xs font-bold transition-all ${
+                                                link.active
+                                                    ? 'bg-[#02c39a] text-white shadow-sm'
+                                                    : 'border border-slate-200 bg-white text-slate-600 hover:border-[#02c39a] hover:text-[#02c39a]'
+                                            }`}
+                                            preserveScroll
+                                            preserveState
+                                        >
+                                            {content}
+                                        </Link>
+                                    ) : (
+                                        <span
+                                            key={i}
+                                            className={`flex h-8 min-w-[32px] items-center justify-center rounded-lg border border-slate-200 bg-white px-2 text-xs font-bold text-slate-300 ${isPrevious || isNext ? 'hidden' : ''}`}
+                                        >
+                                            {content}
+                                        </span>
+                                    );
+                                })}
                             </div>
                         </div>
                     </div>

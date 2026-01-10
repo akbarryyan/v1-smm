@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Deposit;
 use App\Services\TokopayService;
+use App\Models\Transaction;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
@@ -68,6 +69,19 @@ class TokopayCallbackController extends Controller
                 $previousBalance = $user->balance;
                 $user->balance += $deposit->total_diterima; // Add 'total_diterima' (amount without fee)
                 $user->save();
+
+                // Create Transaction Log
+                Transaction::create([
+                    'user_id' => $user->id,
+                    'type' => 'credit',
+                    'category' => 'deposit',
+                    'amount' => $deposit->total_diterima,
+                    'beginning_balance' => $previousBalance,
+                    'ending_balance' => $user->balance,
+                    'description' => "Deposit #{$deposit->id} via {$deposit->payment_method}",
+                    'reference_type' => Deposit::class,
+                    'reference_id' => $deposit->id,
+                ]);
 
                 Log::info("Deposit $refId PAID. User {$user->id} balance updated: $previousBalance -> {$user->balance}");
             }

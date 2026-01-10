@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Order;
 use App\Models\Service;
 use App\Models\User;
+use App\Models\Transaction;
 use Illuminate\Http\Client\Response;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -102,6 +103,7 @@ class OrderController extends Controller
 
         try {
             // Deduct user balance
+            $previousBalance = $user->balance;
             $user->balance -= $totalCost;
             $user->save();
 
@@ -120,6 +122,19 @@ class OrderController extends Controller
                 'username' => $request->username,
                 'answer_number' => $request->answer_number,
                 'status' => 'pending',
+            ]);
+
+            // Create Transaction Log (Debit)
+            Transaction::create([
+                'user_id' => $user->id,
+                'type' => 'debit',
+                'category' => 'pesanan',
+                'amount' => $totalCost,
+                'beginning_balance' => $previousBalance,
+                'ending_balance' => $user->balance,
+                'description' => "Melakukan pemesanan #{$order->id} - {$service->name}",
+                'reference_type' => Order::class,
+                'reference_id' => $order->id,
             ]);
 
             // Prepare API request body
@@ -185,8 +200,22 @@ class OrderController extends Controller
                     );
                 } else {
                     // Provider returned error - refund user
+                    $previousBalanceRefund = $user->balance;
                     $user->balance += $totalCost;
                     $user->save();
+
+                    // Create Transaction Log (Credit/Refund)
+                    Transaction::create([
+                        'user_id' => $user->id,
+                        'type' => 'credit',
+                        'category' => 'refund',
+                        'amount' => $totalCost,
+                        'beginning_balance' => $previousBalanceRefund,
+                        'ending_balance' => $user->balance,
+                        'description' => "Refund pesanan #{$order->id} - Provider Error",
+                        'reference_type' => Order::class,
+                        'reference_id' => $order->id,
+                    ]);
 
                     $order->update([
                         'status' => 'error',
@@ -200,8 +229,22 @@ class OrderController extends Controller
                 }
             } else {
                 // HTTP error - refund user
+                $previousBalanceRefund = $user->balance;
                 $user->balance += $totalCost;
                 $user->save();
+
+                // Create Transaction Log (Credit/Refund)
+                Transaction::create([
+                    'user_id' => $user->id,
+                    'type' => 'credit',
+                    'category' => 'refund',
+                    'amount' => $totalCost,
+                    'beginning_balance' => $previousBalanceRefund,
+                    'ending_balance' => $user->balance,
+                    'description' => "Refund pesanan #{$order->id} - HTTP Error",
+                    'reference_type' => Order::class,
+                    'reference_id' => $order->id,
+                ]);
 
                 $order->update([
                     'status' => 'error',
@@ -228,9 +271,37 @@ class OrderController extends Controller
      */
     public function index(Request $request)
     {
-        $orders = Order::with(['service', 'provider'])
-            ->where('user_id', $request->user()->id)
-            ->orderBy('created_at', 'desc')
+        $query = Order::with(['service', 'provider'])
+            ->where('user_id', $request->user()->id);
+
+        // Filter by Search (ID, Target)
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('id', 'like', "%{$search}%")
+                  ->orWhere('target', 'like', "%{$search}%");
+            });
+        }
+
+        // Filter by Year
+        if ($request->filled('year')) {
+            $query->whereYear('created_at', $request->year);
+        }
+
+        // Filter by Status
+        if ($request->filled('status') && $request->status !== 'Status') {
+             $query->where('status', strtolower($request->status));
+        }
+
+        // Filter by Service/Category (Optional, UI has it)
+        if ($request->filled('category') && $request->category !== 'Filter Layanan') {
+             // Assuming filtering by category in Service
+             $query->whereHas('service', function ($q) use ($request) {
+                 $q->where('category', $request->category);
+             });
+        }
+
+        $orders = $query->orderBy('created_at', 'desc')
             ->paginate(15)
             ->withQueryString();
 
@@ -253,8 +324,15 @@ class OrderController extends Controller
             ];
         });
 
+        // Calculate total spent
+        $totalSpent = Order::where('user_id', $request->user()->id)
+            ->whereNotIn('status', ['error', 'canceled', 'failure'])
+            ->sum('total_cost');
+
         return Inertia::render('orders/index', [
             'orders' => $orders,
+            'totalSpent' => 'Rp ' . number_format($totalSpent, 0, ',', '.'),
+            'filters' => $request->only(['search', 'year', 'status', 'category']),
         ]);
     }
 }

@@ -175,4 +175,19 @@ class DepositController extends Controller
 
         return back()->withErrors(['error' => 'Gagal mengecek status: ' . ($response['message'] ?? 'Unknown error')]);
     }
+
+    /**
+     * Show deposit history.
+     */
+    public function history()
+    {
+        $deposits = \App\Models\Deposit::with('channel')
+            ->where('user_id', \Illuminate\Support\Facades\Auth::id())
+            ->orderBy('created_at', 'desc')
+            ->paginate(10);
+
+        return Inertia::render('deposit/history', [
+            'deposits' => $deposits,
+        ]);
+    }
 }

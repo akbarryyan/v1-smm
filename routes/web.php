@@ -38,7 +38,16 @@ Route::get('/rent-smm', function () {
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboard', function () {
-        return Inertia::render('dashboard');
+        $user = auth()->user();
+        $monthlyUsage = \App\Models\Order::where('user_id', $user->id)
+            ->whereMonth('created_at', now()->month)
+            ->whereYear('created_at', now()->year)
+            ->whereNotIn('status', ['error', 'canceled', 'failure'])
+            ->sum('total_cost');
+
+        return Inertia::render('dashboard', [
+            'monthlyUsage' => $monthlyUsage,
+        ]);
     })->name('dashboard');
 
     Route::prefix('rankings')->group(function () {
@@ -67,21 +76,15 @@ Route::middleware(['auth', 'verified'])->group(function () {
         return Inertia::render('service-updates');
     })->name('service-updates');
 
-    Route::get('service-monitoring', function () {
-        return Inertia::render('service-monitoring');
-    })->name('service-monitoring');
+    Route::get('service-monitoring', [\App\Http\Controllers\ServiceMonitoringController::class, 'index'])->name('service-monitoring');
 
     Route::get('settings/profile', function () {
         return Inertia::render('settings/profile');
     })->name('settings.profile');
 
-    Route::get('balance/mutations', function () {
-        return Inertia::render('balance/mutations');
-    })->name('balance.mutations');
+    Route::get('balance/mutations', [\App\Http\Controllers\BalanceController::class, 'mutations'])->name('balance.mutations');
 
-    Route::get('login-logs', function () {
-        return Inertia::render('login-logs');
-    })->name('login-logs');
+    Route::get('login-logs', [\App\Http\Controllers\LoginLogController::class, 'index'])->name('login-logs');
 
     Route::get('contact-us', function () {
         return Inertia::render('contact-us');
@@ -111,16 +114,22 @@ Route::middleware(['auth', 'verified'])->group(function () {
         return Inertia::render('keuntungan-join-medanpedia');
     })->name('keuntungan-join-medanpedia');
 
+    Route::get('services', [\App\Http\Controllers\ServiceController::class, 'index'])->name('services.index');
+    Route::get('service-updates', [\App\Http\Controllers\ServiceUpdateController::class, 'index'])->name('service-updates.index');
+
     Route::get('deposit', [\App\Http\Controllers\DepositController::class, 'index'])->name('deposit');
     Route::post('deposit', [\App\Http\Controllers\DepositController::class, 'store'])->name('deposit.store');
     Route::get('deposit/show/{refId}', [\App\Http\Controllers\DepositController::class, 'show'])->name('deposit.show');
     Route::post('deposit/check/{refId}', [\App\Http\Controllers\DepositController::class, 'checkStatus'])->name('deposit.check');
 
-    Route::get('deposit/history', function () {
-        return Inertia::render('deposit/history');
-    })->name('deposit.history');
+    Route::get('deposit/history', [\App\Http\Controllers\DepositController::class, 'history'])->name('deposit.history');
 
     Route::get('orders', [\App\Http\Controllers\OrderController::class, 'index'])->name('orders.index');
+
+    Route::get('tickets', [\App\Http\Controllers\TicketController::class, 'index'])->name('tickets.index');
+    Route::post('tickets', [\App\Http\Controllers\TicketController::class, 'store'])->name('tickets.store');
+    Route::get('tickets/{id}', [\App\Http\Controllers\TicketController::class, 'show'])->name('tickets.show');
+    Route::post('tickets/{id}/reply', [\App\Http\Controllers\TicketController::class, 'reply'])->name('tickets.reply');
 
     Route::get('orders/create', [\App\Http\Controllers\OrderController::class, 'create'])->name('orders.create');
     Route::post('orders', [\App\Http\Controllers\OrderController::class, 'store'])->name('orders.store');

@@ -1,5 +1,6 @@
 import AppLayout from '@/layouts/app-layout';
-import { Head } from '@inertiajs/react';
+import { Head, Link, router, usePage } from '@inertiajs/react'; // added router
+import { debounce } from 'lodash';
 import {
     ChevronDown,
     ChevronLeft,
@@ -12,6 +13,7 @@ import {
     ShoppingCart,
     Wallet,
 } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react'; // added hooks
 
 const breadcrumbs = [
     {
@@ -20,22 +22,79 @@ const breadcrumbs = [
     },
 ];
 
-const orders = [
-    {
-        id: '242498970',
-        date: '07 Januari 2026\n05:48:40',
-        service:
-            'Instagram Followers [ Server 3 ] [ Less Drop ] [ Old Accounts ] [ 500K/Days ] [ No Refill ] [ Update 19-09-2025 ]',
-        target: 'hyusunkode',
-        quantity: 10,
-        price: 'Rp 364',
-        startCount: 19,
-        remaining: 0,
-        status: 'success' as const,
-    },
-];
+interface Order {
+    id: number;
+    provider_order_id: string | null;
+    service_name: string;
+    category: string;
+    target: string;
+    quantity: number;
+    total_cost: number;
+    formatted_cost: string;
+    status: string;
+    status_label: string;
+    status_color: string;
+    start_count: number | null;
+    remains: number | null;
+    created_at: string;
+}
+
+interface PaginatedOrders {
+    data: Order[];
+    current_page: number;
+    last_page: number;
+    from: number;
+    to: number;
+    total: number;
+    links: {
+        url: string | null;
+        label: string;
+        active: boolean;
+    }[];
+}
 
 export default function OrderHistory() {
+    const { orders, totalSpent, filters } = usePage<{
+        orders: PaginatedOrders;
+        totalSpent: string;
+        filters: { year?: string; search?: string; status?: string }; // Add filters prop if passed (controller needs to pass it too? or use query params)
+        // Actually usePage().props usually contains what we pass.
+        // OrderController was: 'orders' => ..., 'totalSpent' => ...
+        // Inertia automatically shares query params if configured, or we pass filters manually.
+        // Let's assume we need to pass filters explicitly or rely on existing values.
+        // Better: Initialize from url params if controller doesn't pass 'filters' explicit prop.
+        // But for cleaner code, let's update controller to pass 'filters' => $request->only(...)
+    }>().props;
+
+    // We can get query params from window.location or usePage().props.ziggy/url...
+    // Usually standard pattern is controller passes 'filters'. I'll update controller first or assume defaults.
+    // Let's just use defaults for now, but ideally update controller.
+
+    const [year, setYear] = useState(filters?.year || '2026');
+    const [search, setSearch] = useState(filters?.search || '');
+    const [status, setStatus] = useState(filters?.status || 'Status');
+
+    const debouncedFilter = useMemo(
+        () =>
+            debounce((qYear, qSearch, qStatus) => {
+                router.get(
+                    '/orders',
+                    {
+                        year: qYear,
+                        search: qSearch,
+                        status: qStatus === 'Status' ? '' : qStatus,
+                    },
+                    { preserveState: true, replace: true },
+                );
+            }, 300),
+        [],
+    );
+
+    useEffect(() => {
+        debouncedFilter(year, search, status);
+        return () => debouncedFilter.cancel();
+    }, [year, search, status, debouncedFilter]);
+
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Riwayat Pemesanan" />
@@ -71,7 +130,7 @@ export default function OrderHistory() {
                                 Semua Pesanan
                             </p>
                             <p className="text-xl font-black text-slate-800">
-                                {orders.length}
+                                {orders.total}
                             </p>
                         </div>
                     </div>
@@ -83,10 +142,10 @@ export default function OrderHistory() {
                         </div>
                         <div>
                             <p className="text-[10px] font-bold tracking-wider text-slate-400 uppercase">
-                                Semua Pesanan
+                                Total Pengeluaran
                             </p>
                             <p className="text-xl font-black text-slate-800">
-                                Rp 364
+                                {totalSpent}
                             </p>
                         </div>
                     </div>
@@ -119,10 +178,16 @@ export default function OrderHistory() {
 
                                 {/* Year Filter */}
                                 <div className="relative col-span-4">
-                                    <select className="h-10 w-full cursor-pointer appearance-none rounded-xl border border-slate-200 bg-white px-4 text-xs font-bold text-slate-600 transition-all outline-none focus:border-[#02c39a] focus:ring-2 focus:ring-[#02c39a]/10">
-                                        <option>2026</option>
-                                        <option>2025</option>
-                                        <option>2024</option>
+                                    <select
+                                        value={year}
+                                        onChange={(e) =>
+                                            setYear(e.target.value)
+                                        }
+                                        className="h-10 w-full cursor-pointer appearance-none rounded-xl border border-slate-200 bg-white px-4 text-xs font-bold text-slate-600 transition-all outline-none focus:border-[#02c39a] focus:ring-2 focus:ring-[#02c39a]/10"
+                                    >
+                                        <option value="2026">2026</option>
+                                        <option value="2025">2025</option>
+                                        <option value="2024">2024</option>
                                     </select>
                                     <div className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-slate-400">
                                         <ChevronDown className="h-4 w-4" />
@@ -131,13 +196,24 @@ export default function OrderHistory() {
 
                                 {/* Status Filter */}
                                 <div className="relative col-span-4">
-                                    <select className="h-10 w-full cursor-pointer appearance-none rounded-xl border border-slate-200 bg-white px-4 text-xs font-bold text-slate-600 transition-all outline-none focus:border-[#02c39a] focus:ring-2 focus:ring-[#02c39a]/10">
+                                    <select
+                                        value={status}
+                                        onChange={(e) =>
+                                            setStatus(e.target.value)
+                                        }
+                                        className="h-10 w-full cursor-pointer appearance-none rounded-xl border border-slate-200 bg-white px-4 text-xs font-bold text-slate-600 transition-all outline-none focus:border-[#02c39a] focus:ring-2 focus:ring-[#02c39a]/10"
+                                    >
                                         <option>Status</option>
-                                        <option>Pending</option>
-                                        <option>Processing</option>
-                                        <option>Success</option>
-                                        <option>Partial</option>
-                                        <option>Cancelled</option>
+                                        <option value="pending">Pending</option>
+                                        <option value="processing">
+                                            Processing
+                                        </option>
+                                        <option value="success">Success</option>
+                                        <option value="partial">Partial</option>
+                                        <option value="canceled">
+                                            Cancelled
+                                        </option>
+                                        <option value="error">Error</option>
                                     </select>
                                     <div className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-slate-400">
                                         <ChevronDown className="h-4 w-4" />
@@ -179,6 +255,10 @@ export default function OrderHistory() {
                                     <div className="relative flex-1">
                                         <input
                                             type="text"
+                                            value={search}
+                                            onChange={(e) =>
+                                                setSearch(e.target.value)
+                                            }
                                             placeholder="Cari..."
                                             className="h-10 w-full rounded-xl border border-slate-200 bg-white px-4 text-xs font-bold text-slate-700 transition-all outline-none focus:border-[#02c39a] focus:ring-2 focus:ring-[#02c39a]/10"
                                         />
@@ -214,7 +294,7 @@ export default function OrderHistory() {
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-50">
-                                    {orders.length === 0 ? (
+                                    {orders.data.length === 0 ? (
                                         <tr>
                                             <td
                                                 colSpan={11}
@@ -226,7 +306,7 @@ export default function OrderHistory() {
                                             </td>
                                         </tr>
                                     ) : (
-                                        orders.map((order) => (
+                                        orders.data.map((order) => (
                                             <tr
                                                 key={order.id}
                                                 className="group transition-colors hover:bg-slate-50/50"
@@ -249,12 +329,12 @@ export default function OrderHistory() {
                                                 </td>
                                                 <td className="px-3 py-3">
                                                     <span className="text-[10px] font-bold whitespace-pre-line text-slate-700">
-                                                        {order.date}
+                                                        {order.created_at}
                                                     </span>
                                                 </td>
                                                 <td className="max-w-[200px] px-3 py-3">
                                                     <span className="block text-[10px] leading-tight font-medium text-indigo-600">
-                                                        {order.service}
+                                                        {order.service_name}
                                                     </span>
                                                 </td>
                                                 <td className="px-3 py-3">
@@ -269,32 +349,43 @@ export default function OrderHistory() {
                                                 </td>
                                                 <td className="px-3 py-3">
                                                     <span className="text-xs font-bold text-[#02c39a]">
-                                                        {order.price}
+                                                        {order.formatted_cost}
                                                     </span>
                                                 </td>
                                                 <td className="px-3 py-3">
                                                     <span className="text-xs font-bold text-slate-700">
-                                                        {order.startCount}
+                                                        {order.start_count ??
+                                                            '-'}
                                                     </span>
                                                 </td>
                                                 <td className="px-3 py-3">
                                                     <span className="text-xs font-bold text-slate-700">
-                                                        {order.remaining}
+                                                        {order.remains ?? '-'}
                                                     </span>
                                                 </td>
                                                 <td className="px-3 py-3">
                                                     <span
                                                         className={`inline-flex items-center rounded-md px-2 py-0.5 text-[9px] font-black uppercase ${
                                                             order.status ===
-                                                            'success'
+                                                                'success' ||
+                                                            order.status ===
+                                                                'completed'
                                                                 ? 'bg-emerald-50 text-emerald-600 ring-1 ring-emerald-100'
                                                                 : order.status ===
-                                                                    'pending'
+                                                                        'pending' ||
+                                                                    order.status ===
+                                                                        'processing'
                                                                   ? 'bg-amber-50 text-amber-600 ring-1 ring-amber-100'
-                                                                  : 'bg-rose-50 text-rose-500 ring-1 ring-rose-100'
+                                                                  : order.status ===
+                                                                          'error' ||
+                                                                      order.status ===
+                                                                          'canceled'
+                                                                    ? 'bg-rose-50 text-rose-500 ring-1 ring-rose-100'
+                                                                    : 'bg-slate-50 text-slate-600 ring-1 ring-slate-100'
                                                         }`}
                                                     >
-                                                        {order.status}
+                                                        {order.status_label ||
+                                                            order.status}
                                                     </span>
                                                 </td>
                                                 <td className="px-3 py-3">
@@ -312,19 +403,59 @@ export default function OrderHistory() {
                         {/* Footer / Pagination */}
                         <div className="flex flex-col items-center justify-between gap-3 border-t border-slate-100 bg-slate-50/30 px-5 py-4 sm:flex-row">
                             <p className="order-2 text-[10px] font-bold tracking-widest text-slate-400 uppercase sm:order-1">
-                                Menampilkan {orders.length} Pesanan
+                                Menampilkan {orders.from || 0}-{orders.to || 0}{' '}
+                                dari {orders.total} Pesanan
                             </p>
 
                             <div className="order-1 flex items-center gap-1.5 sm:order-2">
-                                <button className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-400 transition-all hover:bg-slate-50 active:scale-95">
-                                    <ChevronLeft className="h-4 w-4" />
-                                </button>
-                                <button className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#02c39a] text-xs font-bold text-white shadow-sm transition-all">
-                                    1
-                                </button>
-                                <button className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-400 transition-all hover:bg-slate-50 active:scale-95">
-                                    <ChevronRight className="h-4 w-4" />
-                                </button>
+                                {orders.links.map((link, i) => {
+                                    const label = link.label
+                                        .replace('&laquo;', '')
+                                        .replace('&raquo;', '')
+                                        .trim();
+                                    const isPrevious = label === 'Previous';
+                                    const isNext = label === 'Next';
+
+                                    let content;
+                                    if (isPrevious) {
+                                        content = (
+                                            <ChevronLeft className="h-4 w-4" />
+                                        );
+                                    } else if (isNext) {
+                                        content = (
+                                            <ChevronRight className="h-4 w-4" />
+                                        );
+                                    } else {
+                                        content = (
+                                            <span
+                                                dangerouslySetInnerHTML={{
+                                                    __html: link.label,
+                                                }}
+                                            />
+                                        );
+                                    }
+
+                                    return link.url ? (
+                                        <Link
+                                            key={i}
+                                            href={link.url}
+                                            className={`flex h-8 min-w-[32px] items-center justify-center rounded-lg px-2 text-xs font-bold transition-all ${
+                                                link.active
+                                                    ? 'bg-[#02c39a] text-white shadow-sm'
+                                                    : 'border border-slate-200 bg-white text-slate-600 hover:border-[#02c39a] hover:text-[#02c39a]'
+                                            }`}
+                                        >
+                                            {content}
+                                        </Link>
+                                    ) : (
+                                        <span
+                                            key={i}
+                                            className={`flex h-8 min-w-[32px] items-center justify-center rounded-lg border border-slate-200 bg-white px-2 text-xs font-bold text-slate-300 ${isPrevious || isNext ? 'hidden' : ''}`}
+                                        >
+                                            {content}
+                                        </span>
+                                    );
+                                })}
                             </div>
                         </div>
                     </div>
