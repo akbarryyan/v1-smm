@@ -233,7 +233,7 @@ export default function AdminDashboard() {
                                         className="flex flex-1 flex-col items-center gap-2"
                                     >
                                         <div
-                                            className="w-full rounded-t-lg bg-gradient-to-t from-[#02c39a] to-[#02c39a]/60 transition-all hover:from-[#00a884] hover:to-[#00a884]/60"
+                                            className="w-full rounded-t-lg bg-linear-to-t from-[#02c39a] to-[#02c39a]/60 transition-all hover:from-[#00a884] hover:to-[#00a884]/60"
                                             style={{ height: `${value}%` }}
                                         />
                                         <span className="text-[10px] font-bold text-slate-400">

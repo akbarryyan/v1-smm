@@ -4,6 +4,8 @@ use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use Laravel\Fortify\Features;
 
+Route::post('/callback/tokopay', [\App\Http\Controllers\Api\TokopayCallbackController::class, 'handle'])->name('callback.tokopay');
+
 Route::get('/', function () {
     return Inertia::render('welcome', [
         'canRegister' => Features::enabled(Features::registration()),
@@ -109,21 +111,19 @@ Route::middleware(['auth', 'verified'])->group(function () {
         return Inertia::render('keuntungan-join-medanpedia');
     })->name('keuntungan-join-medanpedia');
 
-    Route::get('deposit', function () {
-        return Inertia::render('deposit');
-    })->name('deposit');
+    Route::get('deposit', [\App\Http\Controllers\DepositController::class, 'index'])->name('deposit');
+    Route::post('deposit', [\App\Http\Controllers\DepositController::class, 'store'])->name('deposit.store');
+    Route::get('deposit/show/{refId}', [\App\Http\Controllers\DepositController::class, 'show'])->name('deposit.show');
+    Route::post('deposit/check/{refId}', [\App\Http\Controllers\DepositController::class, 'checkStatus'])->name('deposit.check');
 
     Route::get('deposit/history', function () {
         return Inertia::render('deposit/history');
     })->name('deposit.history');
 
-    Route::get('orders', function () {
-        return Inertia::render('orders/index');
-    })->name('orders.index');
+    Route::get('orders', [\App\Http\Controllers\OrderController::class, 'index'])->name('orders.index');
 
-    Route::get('orders/create', function () {
-        return Inertia::render('orders/create');
-    })->name('orders.create');
+    Route::get('orders/create', [\App\Http\Controllers\OrderController::class, 'create'])->name('orders.create');
+    Route::post('orders', [\App\Http\Controllers\OrderController::class, 'store'])->name('orders.store');
 
     Route::get('orders/mass', function () {
         return Inertia::render('orders/mass');
@@ -131,7 +131,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 });
 
 // Admin Routes
-Route::middleware(['auth', 'verified'])->prefix('admin')->name('admin.')->group(function () {
+Route::middleware(['auth', 'verified', 'admin'])->prefix('admin')->name('admin.')->group(function () {
     Route::get('dashboard', function () {
         return Inertia::render('admin/dashboard');
     })->name('dashboard');
@@ -140,21 +140,30 @@ Route::middleware(['auth', 'verified'])->prefix('admin')->name('admin.')->group(
         return Inertia::render('admin/orders');
     })->name('orders');
 
-    Route::get('services', function () {
-        return Inertia::render('admin/services');
-    })->name('services');
+    Route::get('services', [\App\Http\Controllers\Admin\ServiceController::class, 'index'])->name('services');
+    Route::post('services/{service}/toggle', [\App\Http\Controllers\Admin\ServiceController::class, 'toggle'])->name('services.toggle');
+    Route::put('services/{service}/price', [\App\Http\Controllers\Admin\ServiceController::class, 'updatePrice'])->name('services.update-price');
+    Route::delete('services/{service}', [\App\Http\Controllers\Admin\ServiceController::class, 'destroy'])->name('services.destroy');
+    Route::post('services/bulk-toggle', [\App\Http\Controllers\Admin\ServiceController::class, 'bulkToggle'])->name('services.bulk-toggle');
 
     Route::get('categories', function () {
         return Inertia::render('admin/categories');
     })->name('categories');
 
-    Route::get('providers', function () {
-        return Inertia::render('admin/providers');
-    })->name('providers');
+    Route::get('providers', [\App\Http\Controllers\Admin\ProviderController::class, 'index'])->name('providers');
+    Route::post('providers', [\App\Http\Controllers\Admin\ProviderController::class, 'store'])->name('providers.store');
+    Route::put('providers/{provider}', [\App\Http\Controllers\Admin\ProviderController::class, 'update'])->name('providers.update');
+    Route::delete('providers/{provider}', [\App\Http\Controllers\Admin\ProviderController::class, 'destroy'])->name('providers.destroy');
+    Route::post('providers/{provider}/toggle', [\App\Http\Controllers\Admin\ProviderController::class, 'toggle'])->name('providers.toggle');
+    Route::post('providers/{provider}/test', [\App\Http\Controllers\Admin\ProviderController::class, 'testConnection'])->name('providers.test');
+    Route::post('providers/{provider}/sync', [\App\Http\Controllers\Admin\ProviderController::class, 'syncServices'])->name('providers.sync');
+    Route::post('providers/{provider}/balance', [\App\Http\Controllers\Admin\ProviderController::class, 'checkBalance'])->name('providers.balance');
 
-    Route::get('users', function () {
-        return Inertia::render('admin/users');
-    })->name('users');
+    Route::get('users', [\App\Http\Controllers\Admin\UserController::class, 'index'])->name('users');
+    Route::post('users/{user}/add-balance', [\App\Http\Controllers\Admin\UserController::class, 'addBalance'])->name('users.add-balance');
+    Route::post('users/{user}/subtract-balance', [\App\Http\Controllers\Admin\UserController::class, 'subtractBalance'])->name('users.subtract-balance');
+    Route::post('users/{user}/suspend', [\App\Http\Controllers\Admin\UserController::class, 'suspend'])->name('users.suspend');
+    Route::post('users/{user}/unsuspend', [\App\Http\Controllers\Admin\UserController::class, 'unsuspend'])->name('users.unsuspend');
 
     Route::get('transactions', function () {
         return Inertia::render('admin/transactions');
@@ -164,9 +173,17 @@ Route::middleware(['auth', 'verified'])->prefix('admin')->name('admin.')->group(
         return Inertia::render('admin/logs');
     })->name('logs');
 
-    Route::get('settings', function () {
-        return Inertia::render('admin/settings');
-    })->name('settings');
+    Route::get('settings', [\App\Http\Controllers\Admin\SettingsController::class, 'index'])->name('settings');
+    Route::put('settings/profile', [\App\Http\Controllers\Admin\SettingsController::class, 'updateProfile'])->name('settings.profile');
+    Route::put('settings/password', [\App\Http\Controllers\Admin\SettingsController::class, 'updatePassword'])->name('settings.password');
+
+    // Payment Gateway
+    Route::get('payment-gateway', [\App\Http\Controllers\Admin\PaymentGatewayController::class, 'index'])->name('payment-gateway');
+    Route::post('payment-gateway/{channel}/toggle', [\App\Http\Controllers\Admin\PaymentGatewayController::class, 'toggle'])->name('payment-gateway.toggle');
+    Route::put('payment-gateway/{channel}/fee', [\App\Http\Controllers\Admin\PaymentGatewayController::class, 'updateFee'])->name('payment-gateway.fee');
+    Route::post('payment-gateway/bulk-toggle', [\App\Http\Controllers\Admin\PaymentGatewayController::class, 'bulkToggle'])->name('payment-gateway.bulk-toggle');
+    Route::post('payment-gateway/test', [\App\Http\Controllers\Admin\PaymentGatewayController::class, 'testConnection'])->name('payment-gateway.test');
+    Route::post('payment-gateway/sync', [\App\Http\Controllers\Admin\PaymentGatewayController::class, 'syncChannels'])->name('payment-gateway.sync');
 });
 
 require __DIR__.'/settings.php';

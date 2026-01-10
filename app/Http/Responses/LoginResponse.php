@@ -2,7 +2,10 @@
 
 namespace App\Http\Responses;
 
+use App\Models\User;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Session;
 use Laravel\Fortify\Contracts\LoginResponse as LoginResponseContract;
 
 class LoginResponse implements LoginResponseContract
@@ -15,13 +18,17 @@ class LoginResponse implements LoginResponseContract
      */
     public function toResponse($request)
     {
-        $user = auth()->user();
+        /** @var User $user */
+        $user = Auth::user();
         
         // Determine redirect path based on user role
         $redirectPath = $user->isAdmin() ? '/admin/dashboard' : '/dashboard';
 
+        // Clear any intended URL to prevent wrong redirects
+        Session::forget('url.intended');
+
         return $request->wantsJson()
             ? new JsonResponse(['redirect' => $redirectPath], 200)
-            : redirect()->intended($redirectPath);
+            : redirect($redirectPath);
     }
 }

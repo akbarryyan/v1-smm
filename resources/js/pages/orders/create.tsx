@@ -1,6 +1,35 @@
 import AppLayout from '@/layouts/app-layout';
-import { Head } from '@inertiajs/react';
-import { ChevronDown, Info, ShoppingCart, Tag } from 'lucide-react';
+import { Head, useForm } from '@inertiajs/react';
+import {
+    AlertCircle,
+    ChevronDown,
+    Info,
+    Loader2,
+    ShoppingCart,
+    Tag,
+} from 'lucide-react';
+import { useMemo, useState } from 'react';
+
+interface Service {
+    id: number;
+    provider_service_id: string;
+    name: string;
+    category: string;
+    type: string;
+    price: number;
+    min: number;
+    max: number;
+    refill: boolean;
+    description: string | null;
+}
+
+interface Props {
+    services: Service[];
+    categories: string[];
+    errors?: {
+        balance?: string;
+    };
+}
 
 const breadcrumbs = [
     {
@@ -9,7 +38,69 @@ const breadcrumbs = [
     },
 ];
 
-export default function CreateOrder() {
+export default function CreateOrder({ services, categories, errors }: Props) {
+    const [selectedCategory, setSelectedCategory] = useState('');
+    const [selectedServiceId, setSelectedServiceId] = useState('');
+    const [quantity, setQuantity] = useState('');
+
+    const form = useForm({
+        service_id: '',
+        link: '',
+        quantity: '',
+    });
+
+    // Filter services by selected category
+    const filteredServices = useMemo(() => {
+        if (!selectedCategory) return [];
+        return services.filter((s) => s.category === selectedCategory);
+    }, [selectedCategory, services]);
+
+    // Get selected service details
+    const selectedService = useMemo(() => {
+        if (!selectedServiceId) return null;
+        return services.find((s) => s.id === Number(selectedServiceId));
+    }, [selectedServiceId, services]);
+
+    // Calculate cost
+    const calculatedCost = useMemo(() => {
+        if (!selectedService || !quantity || Number(quantity) <= 0) return 0;
+        return (Number(quantity) / 1000) * selectedService.price;
+    }, [selectedService, quantity]);
+
+    const formatCurrency = (amount: number) => {
+        return new Intl.NumberFormat('id-ID', {
+            style: 'currency',
+            currency: 'IDR',
+            minimumFractionDigits: 0,
+        }).format(amount);
+    };
+
+    const handleCategoryChange = (category: string) => {
+        setSelectedCategory(category);
+        setSelectedServiceId('');
+        form.setData('service_id', '');
+    };
+
+    const handleServiceChange = (serviceId: string) => {
+        setSelectedServiceId(serviceId);
+        form.setData('service_id', serviceId);
+        // Reset quantity when service changes
+        setQuantity('');
+        form.setData('quantity', '');
+    };
+
+    const handleQuantityChange = (value: string) => {
+        setQuantity(value);
+        form.setData('quantity', value);
+    };
+
+    const handleSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        form.post('/orders', {
+            preserveScroll: true,
+        });
+    };
+
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Buat Pesanan" />
@@ -39,26 +130,39 @@ export default function CreateOrder() {
                                     Buat Pesanan
                                 </h3>
                             </div>
-                            <button className="flex items-center gap-1.5 rounded-lg bg-indigo-500 px-3 py-1.5 text-[10px] font-bold text-white transition-all hover:bg-indigo-600">
-                                <Tag className="h-3 w-3" />
-                                Kategori
-                            </button>
+                            <div className="flex items-center gap-1.5 rounded-lg bg-indigo-50 px-3 py-1.5">
+                                <Tag className="h-3 w-3 text-indigo-500" />
+                                <span className="text-[10px] font-bold text-indigo-600">
+                                    {services.length} Layanan
+                                </span>
+                            </div>
                         </div>
 
-                        <div className="space-y-4 p-5">
+                        <form onSubmit={handleSubmit} className="space-y-4 p-5">
                             {/* Kategori */}
                             <div className="space-y-1.5">
                                 <label className="text-xs font-bold text-slate-700">
                                     Kategori
                                 </label>
                                 <div className="relative">
-                                    <select className="h-10 w-full cursor-pointer appearance-none rounded-xl border border-slate-200 bg-white px-4 text-xs font-bold text-slate-600 transition-all outline-none focus:border-[#02c39a] focus:ring-2 focus:ring-[#02c39a]/10">
-                                        <option>Pilih...</option>
-                                        <option>Instagram</option>
-                                        <option>TikTok</option>
-                                        <option>YouTube</option>
-                                        <option>Twitter</option>
-                                        <option>Facebook</option>
+                                    <select
+                                        value={selectedCategory}
+                                        onChange={(e) =>
+                                            handleCategoryChange(e.target.value)
+                                        }
+                                        className="h-10 w-full cursor-pointer appearance-none rounded-xl border border-slate-200 bg-white px-4 text-xs font-bold text-slate-600 transition-all outline-none focus:border-[#02c39a] focus:ring-2 focus:ring-[#02c39a]/10"
+                                    >
+                                        <option value="">
+                                            Pilih Kategori...
+                                        </option>
+                                        {categories.map((category) => (
+                                            <option
+                                                key={category}
+                                                value={category}
+                                            >
+                                                {category}
+                                            </option>
+                                        ))}
                                     </select>
                                     <div className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-slate-400">
                                         <ChevronDown className="h-4 w-4" />
@@ -72,20 +176,99 @@ export default function CreateOrder() {
                                     Layanan
                                 </label>
                                 <div className="relative">
-                                    <select className="h-10 w-full cursor-pointer appearance-none rounded-xl border border-slate-200 bg-white px-4 text-xs font-bold text-slate-600 transition-all outline-none focus:border-[#02c39a] focus:ring-2 focus:ring-[#02c39a]/10">
-                                        <option>Pilih...</option>
+                                    <select
+                                        value={selectedServiceId}
+                                        onChange={(e) =>
+                                            handleServiceChange(e.target.value)
+                                        }
+                                        disabled={!selectedCategory}
+                                        className="h-10 w-full cursor-pointer appearance-none rounded-xl border border-slate-200 bg-white px-4 text-xs font-bold text-slate-600 transition-all outline-none focus:border-[#02c39a] focus:ring-2 focus:ring-[#02c39a]/10 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400"
+                                    >
+                                        <option value="">
+                                            {selectedCategory
+                                                ? 'Pilih Layanan...'
+                                                : 'Pilih kategori terlebih dahulu...'}
+                                        </option>
+                                        {filteredServices.map((service) => (
+                                            <option
+                                                key={service.id}
+                                                value={service.id}
+                                            >
+                                                {service.name} -{' '}
+                                                {formatCurrency(service.price)}
+                                                /1K
+                                            </option>
+                                        ))}
                                     </select>
                                     <div className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-slate-400">
                                         <ChevronDown className="h-4 w-4" />
                                     </div>
                                 </div>
+                                {form.errors.service_id && (
+                                    <p className="flex items-center gap-1 text-[10px] text-rose-500">
+                                        <AlertCircle className="h-3 w-3" />
+                                        {form.errors.service_id}
+                                    </p>
+                                )}
                             </div>
 
                             {/* Deskripsi Layanan */}
                             <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-                                <p className="text-xs text-slate-500 italic">
-                                    Deskripsi layanan.
-                                </p>
+                                {selectedService ? (
+                                    <div className="space-y-2">
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-[10px] font-bold text-slate-400 uppercase">
+                                                Detail Layanan
+                                            </span>
+                                            {selectedService.refill && (
+                                                <span className="rounded bg-blue-100 px-1.5 py-0.5 text-[9px] font-bold text-blue-600">
+                                                    REFILL
+                                                </span>
+                                            )}
+                                        </div>
+                                        <p className="text-xs font-medium text-slate-700">
+                                            {selectedService.name}
+                                        </p>
+                                        {selectedService.description && (
+                                            <p className="text-xs leading-relaxed text-slate-500">
+                                                {selectedService.description}
+                                            </p>
+                                        )}
+                                        <div className="grid grid-cols-3 gap-2 pt-2">
+                                            <div className="rounded-lg bg-white px-3 py-2 text-center ring-1 ring-slate-200">
+                                                <span className="text-[9px] font-bold tracking-wide text-slate-400 uppercase">
+                                                    Harga
+                                                </span>
+                                                <p className="text-xs font-bold text-[#02c39a]">
+                                                    {formatCurrency(
+                                                        selectedService.price,
+                                                    )}
+                                                    /1K
+                                                </p>
+                                            </div>
+                                            <div className="rounded-lg bg-white px-3 py-2 text-center ring-1 ring-slate-200">
+                                                <span className="text-[9px] font-bold tracking-wide text-slate-400 uppercase">
+                                                    Min
+                                                </span>
+                                                <p className="text-xs font-bold text-indigo-600">
+                                                    {selectedService.min.toLocaleString()}
+                                                </p>
+                                            </div>
+                                            <div className="rounded-lg bg-white px-3 py-2 text-center ring-1 ring-slate-200">
+                                                <span className="text-[9px] font-bold tracking-wide text-slate-400 uppercase">
+                                                    Max
+                                                </span>
+                                                <p className="text-xs font-bold text-amber-600">
+                                                    {selectedService.max.toLocaleString()}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <p className="text-xs text-slate-500 italic">
+                                        Pilih layanan untuk melihat deskripsi.
+                                    </p>
+                                )}
                             </div>
 
                             {/* Link/Target */}
@@ -95,9 +278,24 @@ export default function CreateOrder() {
                                 </label>
                                 <input
                                     type="text"
-                                    placeholder=""
-                                    className="h-10 w-full rounded-xl border border-slate-200 bg-white px-4 text-xs font-bold text-slate-700 transition-all outline-none focus:border-[#02c39a] focus:ring-2 focus:ring-[#02c39a]/10"
+                                    value={form.data.link}
+                                    onChange={(e) =>
+                                        form.setData('link', e.target.value)
+                                    }
+                                    placeholder={
+                                        selectedService
+                                            ? 'Masukkan link atau username target'
+                                            : 'Pilih layanan terlebih dahulu'
+                                    }
+                                    disabled={!selectedService}
+                                    className="h-10 w-full rounded-xl border border-slate-200 bg-white px-4 text-xs font-bold text-slate-700 transition-all outline-none focus:border-[#02c39a] focus:ring-2 focus:ring-[#02c39a]/10 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400"
                                 />
+                                {form.errors.link && (
+                                    <p className="flex items-center gap-1 text-[10px] text-rose-500">
+                                        <AlertCircle className="h-3 w-3" />
+                                        {form.errors.link}
+                                    </p>
+                                )}
                             </div>
 
                             {/* Jumlah */}
@@ -106,37 +304,88 @@ export default function CreateOrder() {
                                     <label className="text-xs font-bold text-slate-700">
                                         Jumlah
                                     </label>
-                                    <span className="inline-flex items-center rounded bg-indigo-100 px-1.5 py-0.5 text-[9px] font-bold text-indigo-600">
-                                        Min: 0
-                                    </span>
-                                    <span className="inline-flex items-center rounded bg-amber-100 px-1.5 py-0.5 text-[9px] font-bold text-amber-600">
-                                        Max: 0
-                                    </span>
+                                    {selectedService && (
+                                        <>
+                                            <span className="inline-flex items-center rounded bg-indigo-100 px-1.5 py-0.5 text-[9px] font-bold text-indigo-600">
+                                                Min:{' '}
+                                                {selectedService.min.toLocaleString()}
+                                            </span>
+                                            <span className="inline-flex items-center rounded bg-amber-100 px-1.5 py-0.5 text-[9px] font-bold text-amber-600">
+                                                Max:{' '}
+                                                {selectedService.max.toLocaleString()}
+                                            </span>
+                                        </>
+                                    )}
                                 </div>
                                 <input
                                     type="number"
-                                    placeholder=""
-                                    className="h-10 w-full rounded-xl border border-slate-200 bg-white px-4 text-xs font-bold text-slate-700 transition-all outline-none focus:border-[#02c39a] focus:ring-2 focus:ring-[#02c39a]/10"
+                                    value={quantity}
+                                    onChange={(e) =>
+                                        handleQuantityChange(e.target.value)
+                                    }
+                                    placeholder={
+                                        selectedService
+                                            ? `Masukkan jumlah (${selectedService.min} - ${selectedService.max})`
+                                            : 'Pilih layanan terlebih dahulu'
+                                    }
+                                    disabled={!selectedService}
+                                    min={selectedService?.min || 0}
+                                    max={selectedService?.max || 0}
+                                    className="h-10 w-full rounded-xl border border-slate-200 bg-white px-4 text-xs font-bold text-slate-700 transition-all outline-none focus:border-[#02c39a] focus:ring-2 focus:ring-[#02c39a]/10 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400"
                                 />
+                                {form.errors.quantity && (
+                                    <p className="flex items-center gap-1 text-[10px] text-rose-500">
+                                        <AlertCircle className="h-3 w-3" />
+                                        {form.errors.quantity}
+                                    </p>
+                                )}
                             </div>
 
                             {/* Biaya */}
                             <div className="space-y-1.5">
                                 <label className="text-xs font-bold text-slate-700">
-                                    Biaya
+                                    Total Biaya
                                 </label>
-                                <div className="flex h-10 w-full items-center rounded-xl border border-slate-200 bg-slate-50 px-4">
-                                    <span className="text-xs font-bold text-slate-500">
-                                        Rp
+                                <div className="flex h-12 w-full items-center justify-between rounded-xl border border-slate-200 bg-linear-to-r from-slate-50 to-emerald-50 px-4">
+                                    <span className="text-xs font-medium text-slate-500">
+                                        Total
+                                    </span>
+                                    <span className="text-lg font-bold text-[#02c39a]">
+                                        {formatCurrency(calculatedCost)}
                                     </span>
                                 </div>
+                                {errors?.balance && (
+                                    <p className="flex items-center gap-1 text-[10px] text-rose-500">
+                                        <AlertCircle className="h-3 w-3" />
+                                        {errors.balance}
+                                    </p>
+                                )}
                             </div>
 
                             {/* Submit Button */}
-                            <button className="h-10 w-full rounded-xl bg-[#02c39a] text-xs font-bold text-white shadow-[0_3px_0_rgb(0,168,132)] transition-all hover:translate-y-[1px] hover:bg-[#00a884] hover:shadow-[0_1px_0_rgb(0,168,132)] active:translate-y-[2px] active:shadow-none">
-                                Pesan
+                            <button
+                                type="submit"
+                                disabled={
+                                    form.processing ||
+                                    !selectedService ||
+                                    !form.data.link ||
+                                    !quantity
+                                }
+                                className="hover:translate-y-1px flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#02c39a] text-xs font-bold text-white shadow-[0_3px_0_rgb(0,168,132)] transition-all hover:bg-[#00a884] hover:shadow-[0_1px_0_rgb(0,168,132)] active:translate-y-[2px] active:shadow-none disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:shadow-[0_3px_0_rgb(0,168,132)]"
+                            >
+                                {form.processing ? (
+                                    <>
+                                        <Loader2 className="h-4 w-4 animate-spin" />
+                                        Memproses...
+                                    </>
+                                ) : (
+                                    <>
+                                        <ShoppingCart className="h-4 w-4" />
+                                        Pesan Sekarang
+                                    </>
+                                )}
                             </button>
-                        </div>
+                        </form>
                     </div>
 
                     {/* Right Column - Information */}
@@ -307,14 +556,6 @@ export default function CreateOrder() {
                                             pesanan yang sudah pernah dipesan
                                             sebelumnya, mohon menunggu sampai
                                             pesanan sebelumnya selesai diproses.
-                                            Jika terjadi kesalahan / mendapatkan
-                                            pesan gagal yang kurang jelas,
-                                            silahkan hubungi Admin untuk
-                                            informasi lebih{' '}
-                                            <span className="text-indigo-600">
-                                                lanjut
-                                            </span>
-                                            .
                                         </span>
                                     </li>
                                     <li className="flex items-start gap-2">
@@ -327,22 +568,6 @@ export default function CreateOrder() {
                                             </span>{' '}
                                             memasukkan orderan yang sama jika
                                             orderan sebelumnya belum selesai.
-                                        </span>
-                                    </li>
-                                    <li className="flex items-start gap-2">
-                                        <span className="text-slate-400">
-                                            •
-                                        </span>
-                                        <span>
-                                            <span className="text-indigo-600">
-                                                Jangan
-                                            </span>{' '}
-                                            memasukkan orderan yang sama di
-                                            panel lain{' '}
-                                            <span className="text-indigo-600">
-                                                jika
-                                            </span>{' '}
-                                            orderan di MedanPedia belum selesai.
                                         </span>
                                     </li>
                                     <li className="flex items-start gap-2">
@@ -366,20 +591,6 @@ export default function CreateOrder() {
                                             di cancel / refund manual, seluruh
                                             proses orderan dikerjakan secara
                                             otomatis oleh server.
-                                        </span>
-                                    </li>
-                                    <li className="flex items-start gap-2">
-                                        <span className="text-slate-400">
-                                            •
-                                        </span>
-                                        <span>
-                                            Jika Anda memasukkan orderan di
-                                            MedanPedia berarti Anda sudah
-                                            mengerti aturan MedanPedia dan{' '}
-                                            <span className="text-indigo-600">
-                                                jangan lupa
-                                            </span>{' '}
-                                            baca menu F.A.Q serta Terms
                                         </span>
                                     </li>
                                 </ul>

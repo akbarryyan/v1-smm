@@ -1,6 +1,16 @@
 import AppLayout from '@/layouts/app-layout';
-import { Head } from '@inertiajs/react';
-import { AlertCircle, CreditCard, Info, QrCode } from 'lucide-react';
+import { Head, router, usePage } from '@inertiajs/react';
+import {
+    AlertCircle,
+    Banknote,
+    CreditCard,
+    Gift,
+    Info,
+    Loader2,
+    QrCode,
+    Wallet,
+} from 'lucide-react';
+import { useState } from 'react';
 
 const breadcrumbs = [
     {
@@ -9,46 +19,124 @@ const breadcrumbs = [
     },
 ];
 
-const depositMethods = [
-    {
-        id: 1,
-        title: 'QRIS BONUS 1% ( FEE Rp 750 + 0.70% ) [ ON 24 JAM ] [ Emergency 2 ]',
-        minDeposit: 'Rp 1.000',
-        maxDeposit: 'Rp 5.000.000',
-        schedule: '24 Jam',
-        status: 'online',
-        fee: '0.70%',
-    },
-    {
-        id: 2,
-        title: 'QRIS BONUS 1% ( fee 1% ) [ ON 24 JAM ] V3',
-        minDeposit: 'Rp 1.000',
-        maxDeposit: 'Rp 10.000.000',
-        schedule: '24 Jam',
-        status: 'online',
-        fee: '1%',
-    },
-    {
-        id: 3,
-        title: 'QRIS BONUS 1% [ FEE 0.7% ]',
-        minDeposit: 'Rp 100',
-        maxDeposit: 'Rp 10.000.000',
-        schedule: '01:00 - 93:00',
-        status: 'offline',
-        fee: '0.7%',
-    },
-    {
-        id: 4,
-        title: 'QRIS BONUS 1% ( 0,70% ) [ ON 24 JAM ]',
-        minDeposit: 'Rp 100',
-        maxDeposit: 'Rp 10.000.000',
-        schedule: '24 Jam',
-        status: 'online',
-        fee: '0.70%',
-    },
-];
+interface PaymentChannel {
+    id: number;
+    code: string;
+    name: string;
+    category: string;
+    category_label: string;
+    fee_flat: number;
+    fee_percent: number;
+    formatted_fee: string;
+    min_amount: number;
+    max_amount: number;
+}
+
+// Bonus percentage based on deposit amount (can be configured)
+const BONUS_PERCENT = 0; // Set to 0 for no bonus, or any number for bonus
 
 export default function Deposit() {
+    const { groupedChannels } = usePage<{
+        groupedChannels: Record<string, PaymentChannel[]>;
+    }>().props;
+
+    const [activeCategory, setActiveCategory] =
+        useState<string>('virtual_account');
+    const [selectedChannel, setSelectedChannel] =
+        useState<PaymentChannel | null>(null);
+    const [amount, setAmount] = useState<string>('');
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
+    const categories = [
+        { key: 'virtual_account', label: 'Virtual Account', icon: Banknote },
+        { key: 'emoney', label: 'E-Money', icon: Wallet },
+        { key: 'qris', label: 'QRIS', icon: QrCode },
+    ];
+
+    const activeChannels = groupedChannels[activeCategory] || [];
+
+    const getCategoryIcon = (category: string) => {
+        switch (category) {
+            case 'virtual_account':
+                return 'VA';
+            case 'emoney':
+                return 'E-W';
+            case 'qris':
+                return 'QRIS';
+            default:
+                return '💳';
+        }
+    };
+
+    // Calculate fee and final amount
+    const numericAmount = parseInt(amount.replace(/\D/g, '')) || 0;
+    const fee = selectedChannel
+        ? selectedChannel.fee_flat +
+          (numericAmount * selectedChannel.fee_percent) / 100
+        : 0;
+    const bonus = BONUS_PERCENT > 0 ? (numericAmount * BONUS_PERCENT) / 100 : 0;
+    const totalReceived = numericAmount + bonus;
+
+    // Format number with thousand separator
+    const formatNumber = (num: number) => {
+        return num.toLocaleString('id-ID');
+    };
+
+    // Handle amount input
+    const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const value = e.target.value.replace(/\D/g, '');
+        setAmount(value);
+    };
+
+    // Reset form when changing category - moved to click handler to avoid effect lint
+    // useEffect(() => {
+    //    setSelectedChannel(null);
+    //    setAmount('');
+    // }, [activeCategory]);
+
+    // Handle category change
+    const handleCategoryChange = (key: string) => {
+        setActiveCategory(key);
+        setSelectedChannel(null);
+        setAmount('');
+    };
+
+    // Handle channel selection
+    const handleSelectChannel = (channel: PaymentChannel) => {
+        setSelectedChannel(channel);
+        setAmount('');
+    };
+
+    // Handle change method
+    const handleChangeMethod = () => {
+        setSelectedChannel(null);
+        setAmount('');
+    };
+
+    // Handle submit
+    const handleSubmit = () => {
+        if (!selectedChannel || numericAmount < selectedChannel.min_amount)
+            return;
+
+        setIsSubmitting(true);
+        router.post(
+            '/deposit',
+            {
+                channel_id: selectedChannel.id,
+                amount: numericAmount,
+            },
+            {
+                onFinish: () => setIsSubmitting(false),
+            },
+        );
+    };
+
+    // Validation
+    const isValidAmount = selectedChannel
+        ? numericAmount >= selectedChannel.min_amount &&
+          numericAmount <= selectedChannel.max_amount
+        : false;
+
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Deposit" />
@@ -78,64 +166,297 @@ export default function Deposit() {
                             </h3>
                         </div>
 
-                        <div className="space-y-4 p-5">
-                            {/* QR Code Label */}
-                            <div className="flex items-center gap-2 text-sm font-bold text-slate-700">
-                                <QrCode className="h-4 w-4" />
-                                QR Code
-                            </div>
-
-                            {/* Deposit Method Cards */}
-                            {depositMethods.map((method) => (
-                                <div
-                                    key={method.id}
-                                    className="space-y-3 rounded-xl border border-slate-200 p-4"
-                                >
+                        {selectedChannel ? (
+                            // Show deposit form when channel is selected
+                            <div className="p-5">
+                                {/* Selected Channel Info */}
+                                <div className="mb-5 rounded-xl border border-slate-200 p-4">
                                     <div className="flex items-start gap-3">
-                                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-[10px] font-black text-slate-500">
-                                            QRIS
+                                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#02c39a]/10 text-[9px] font-black text-[#02c39a]">
+                                            {getCategoryIcon(
+                                                selectedChannel.category,
+                                            )}
                                         </div>
                                         <div className="min-w-0 flex-1">
-                                            <h4 className="text-xs leading-tight font-bold text-slate-800">
-                                                {method.title}
+                                            <h4 className="text-sm leading-tight font-bold text-slate-800">
+                                                {selectedChannel.name}
                                             </h4>
-                                            <div className="mt-2 space-y-0.5 text-[11px] text-slate-500">
+                                            <div className="mt-1 space-y-0.5 text-[11px] text-slate-500">
                                                 <p>
                                                     Minimal Deposit:{' '}
                                                     <span className="font-bold text-slate-700">
-                                                        {method.minDeposit}
+                                                        Rp{' '}
+                                                        {formatNumber(
+                                                            selectedChannel.min_amount,
+                                                        )}
                                                     </span>
                                                 </p>
                                                 <p>
                                                     Maksimal Deposit:{' '}
                                                     <span className="font-bold text-slate-700">
-                                                        {method.maxDeposit}
+                                                        Rp{' '}
+                                                        {formatNumber(
+                                                            selectedChannel.max_amount,
+                                                        )}
                                                     </span>
                                                 </p>
                                                 <p>
                                                     Jadwal Online:{' '}
                                                     <span className="font-bold text-slate-700">
-                                                        {method.schedule}
+                                                        24 Jam
                                                     </span>
                                                 </p>
                                             </div>
                                         </div>
                                     </div>
-                                    <button
-                                        className={`w-full rounded-lg py-2 text-xs font-bold transition-all ${
-                                            method.status === 'online'
-                                                ? 'bg-[#02c39a] text-white hover:bg-[#00a884]'
-                                                : 'cursor-not-allowed bg-rose-500 text-white'
-                                        }`}
-                                        disabled={method.status === 'offline'}
-                                    >
-                                        {method.status === 'online'
-                                            ? 'Online [24 Jam]'
-                                            : 'Offline'}
-                                    </button>
+                                    <div className="mt-3">
+                                        <div className="w-full rounded-lg bg-[#02c39a] py-2 text-center text-xs font-bold text-white">
+                                            Online [24 Jam]
+                                        </div>
+                                    </div>
                                 </div>
-                            ))}
-                        </div>
+
+                                {/* Bonus Section */}
+                                <div className="mb-5 rounded-xl border border-slate-200 p-4">
+                                    <div className="mb-3 flex items-center justify-center gap-2 text-sm font-bold text-slate-700">
+                                        <Gift className="h-4 w-4 text-[#02c39a]" />
+                                        Bonus Deposit
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-4 text-center">
+                                        <div>
+                                            <p className="text-xs text-slate-500">
+                                                Jumlah Deposit (Minimal)
+                                            </p>
+                                            <p className="mt-1 text-sm font-bold text-slate-800">
+                                                Rp{' '}
+                                                {formatNumber(
+                                                    selectedChannel.min_amount,
+                                                )}
+                                            </p>
+                                        </div>
+                                        <div>
+                                            <p className="text-xs text-slate-500">
+                                                Bonus
+                                            </p>
+                                            <p className="mt-1 text-sm font-bold text-[#02c39a]">
+                                                {BONUS_PERCENT}%
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Deposit Form */}
+                                <div className="space-y-4">
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="mb-1.5 block text-xs font-bold text-slate-700">
+                                                Jumlah Deposit
+                                            </label>
+                                            <div className="flex overflow-hidden rounded-lg border border-slate-200 focus-within:border-[#02c39a] focus-within:ring-2 focus-within:ring-[#02c39a]/20">
+                                                <span className="flex items-center bg-slate-50 px-3 text-sm font-medium text-slate-500">
+                                                    Rp
+                                                </span>
+                                                <input
+                                                    type="text"
+                                                    value={
+                                                        numericAmount > 0
+                                                            ? formatNumber(
+                                                                  numericAmount,
+                                                              )
+                                                            : ''
+                                                    }
+                                                    onChange={
+                                                        handleAmountChange
+                                                    }
+                                                    placeholder="0"
+                                                    className="w-full border-0 px-3 py-2.5 text-sm focus:ring-0"
+                                                />
+                                            </div>
+                                            {numericAmount > 0 &&
+                                                numericAmount <
+                                                    selectedChannel.min_amount && (
+                                                    <p className="mt-1 text-[10px] text-rose-500">
+                                                        Minimal Rp{' '}
+                                                        {formatNumber(
+                                                            selectedChannel.min_amount,
+                                                        )}
+                                                    </p>
+                                                )}
+                                            {numericAmount >
+                                                selectedChannel.max_amount && (
+                                                <p className="mt-1 text-[10px] text-rose-500">
+                                                    Maksimal Rp{' '}
+                                                    {formatNumber(
+                                                        selectedChannel.max_amount,
+                                                    )}
+                                                </p>
+                                            )}
+                                        </div>
+                                        <div>
+                                            <label className="mb-1.5 block text-xs font-bold text-slate-700">
+                                                Saldo Didapat
+                                            </label>
+                                            <div className="flex overflow-hidden rounded-lg border border-slate-200 bg-slate-50">
+                                                <span className="flex items-center px-3 text-sm font-medium text-slate-500">
+                                                    Rp
+                                                </span>
+                                                <input
+                                                    type="text"
+                                                    value={
+                                                        totalReceived > 0
+                                                            ? formatNumber(
+                                                                  totalReceived,
+                                                              )
+                                                            : ''
+                                                    }
+                                                    readOnly
+                                                    placeholder="0"
+                                                    className="w-full border-0 bg-slate-50 px-3 py-2.5 text-sm font-bold text-slate-800 focus:ring-0"
+                                                />
+                                            </div>
+                                            {BONUS_PERCENT > 0 &&
+                                                numericAmount > 0 && (
+                                                    <p className="mt-1 text-[10px] text-[#02c39a]">
+                                                        +Rp{' '}
+                                                        {formatNumber(bonus)}{' '}
+                                                        bonus
+                                                    </p>
+                                                )}
+                                        </div>
+                                    </div>
+
+                                    {/* Fee Info */}
+                                    {numericAmount > 0 && (
+                                        <div className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-700">
+                                            <span className="font-bold">
+                                                Biaya Admin:
+                                            </span>{' '}
+                                            {selectedChannel.formatted_fee}
+                                            {fee > 0 &&
+                                                ` (Rp ${formatNumber(Math.round(fee))})`}
+                                        </div>
+                                    )}
+
+                                    {/* Action Buttons */}
+                                    <div className="grid grid-cols-2 gap-3 pt-2">
+                                        <button
+                                            onClick={handleChangeMethod}
+                                            className="rounded-lg bg-slate-600 py-2.5 text-xs font-bold text-white transition-all hover:bg-slate-700"
+                                        >
+                                            Ganti Metode Pembayaran
+                                        </button>
+                                        <button
+                                            onClick={handleSubmit}
+                                            disabled={
+                                                !isValidAmount || isSubmitting
+                                            }
+                                            className="flex items-center justify-center gap-2 rounded-lg bg-[#02c39a] py-2.5 text-xs font-bold text-white transition-all hover:bg-[#00a884] disabled:cursor-not-allowed disabled:opacity-50"
+                                        >
+                                            {isSubmitting && (
+                                                <Loader2 className="h-3 w-3 animate-spin" />
+                                            )}
+                                            Lanjutkan
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        ) : (
+                            // Show channel list when no channel selected
+                            <>
+                                {/* Category Tabs */}
+                                <div className="flex border-b border-slate-100">
+                                    {categories.map((cat) => {
+                                        const Icon = cat.icon;
+                                        return (
+                                            <button
+                                                key={cat.key}
+                                                onClick={() =>
+                                                    handleCategoryChange(
+                                                        cat.key,
+                                                    )
+                                                }
+                                                className={`flex flex-1 items-center justify-center gap-2 px-4 py-3 text-xs font-bold transition-all ${
+                                                    activeCategory === cat.key
+                                                        ? 'border-b-2 border-[#02c39a] bg-[#02c39a]/5 text-[#02c39a]'
+                                                        : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'
+                                                }`}
+                                            >
+                                                <Icon className="h-4 w-4" />
+                                                <span className="hidden sm:inline">
+                                                    {cat.label}
+                                                </span>
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+
+                                <div className="space-y-3 p-4">
+                                    {activeChannels.length === 0 ? (
+                                        <div className="flex flex-col items-center gap-2 py-8 text-center">
+                                            <CreditCard className="h-10 w-10 text-slate-300" />
+                                            <p className="text-sm text-slate-500">
+                                                Tidak ada metode pembayaran
+                                                tersedia.
+                                            </p>
+                                        </div>
+                                    ) : (
+                                        activeChannels.map((channel) => (
+                                            <div
+                                                key={channel.id}
+                                                onClick={() =>
+                                                    handleSelectChannel(channel)
+                                                }
+                                                className="group cursor-pointer space-y-3 rounded-xl border border-slate-200 p-4 transition-all hover:border-[#02c39a] hover:shadow-md"
+                                            >
+                                                <div className="flex items-start gap-3">
+                                                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-[9px] font-black text-slate-600 group-hover:bg-[#02c39a]/10 group-hover:text-[#02c39a]">
+                                                        {getCategoryIcon(
+                                                            channel.category,
+                                                        )}
+                                                    </div>
+                                                    <div className="min-w-0 flex-1">
+                                                        <h4 className="text-sm leading-tight font-bold text-slate-800">
+                                                            {channel.name}
+                                                        </h4>
+                                                        <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-[11px] text-slate-500">
+                                                            <p>
+                                                                Minimal:{' '}
+                                                                <span className="font-bold text-slate-700">
+                                                                    Rp{' '}
+                                                                    {formatNumber(
+                                                                        channel.min_amount,
+                                                                    )}
+                                                                </span>
+                                                            </p>
+                                                            <p>
+                                                                Maksimal:{' '}
+                                                                <span className="font-bold text-slate-700">
+                                                                    Rp{' '}
+                                                                    {formatNumber(
+                                                                        channel.max_amount,
+                                                                    )}
+                                                                </span>
+                                                            </p>
+                                                            <p className="col-span-2">
+                                                                Biaya:{' '}
+                                                                <span className="font-bold text-amber-600">
+                                                                    {
+                                                                        channel.formatted_fee
+                                                                    }
+                                                                </span>
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <button className="w-full rounded-lg bg-[#02c39a] py-2.5 text-xs font-bold text-white shadow-sm transition-all hover:bg-[#00a884] hover:shadow-md">
+                                                    Pilih {channel.name}
+                                                </button>
+                                            </div>
+                                        ))
+                                    )}
+                                </div>
+                            </>
+                        )}
                     </div>
 
                     {/* Right Column - Information */}
