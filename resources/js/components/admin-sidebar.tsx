@@ -10,6 +10,8 @@ import {
     Folder,
     LayoutDashboard,
     LogOut,
+    MessageSquare,
+    Newspaper,
     Plug,
     Settings,
     ShoppingCart,
@@ -53,6 +55,16 @@ const adminNavItems: NavItem[] = [
         title: 'Pengguna',
         href: '/admin/users',
         icon: Users,
+    },
+    {
+        title: 'Tickets',
+        href: '/admin/tickets',
+        icon: MessageSquare,
+    },
+    {
+        title: 'Berita',
+        href: '/admin/news',
+        icon: Newspaper,
     },
     {
         title: 'Saldo & Transaksi',

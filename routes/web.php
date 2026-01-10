@@ -46,8 +46,15 @@ Route::middleware(['auth', 'verified'])->group(function () {
             ->whereNotIn('status', ['error', 'canceled', 'failure'])
             ->sum('total_cost');
 
+        // Get active news for modal
+        $news = \App\Models\News::where('is_active', true)
+            ->orderBy('created_at', 'desc')
+            ->limit(10)
+            ->get();
+
         return Inertia::render('dashboard', [
             'monthlyUsage' => $monthlyUsage,
+            'news' => $news,
         ]);
     })->name('dashboard');
 
@@ -69,9 +76,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         return Inertia::render('tickets');
     })->name('tickets');
 
-    Route::get('news', function () {
-        return Inertia::render('news');
-    })->name('news');
+    Route::get('news', [\App\Http\Controllers\NewsController::class, 'index'])->name('news');
 
     Route::get('service-updates', function () {
         return Inertia::render('service-updates');
@@ -142,13 +147,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
 // Admin Routes
 Route::middleware(['auth', 'verified', 'admin'])->prefix('admin')->name('admin.')->group(function () {
-    Route::get('dashboard', function () {
-        return Inertia::render('admin/dashboard');
-    })->name('dashboard');
+    Route::get('dashboard', [\App\Http\Controllers\Admin\DashboardController::class, 'index'])->name('dashboard');
 
-    Route::get('orders', function () {
-        return Inertia::render('admin/orders');
-    })->name('orders');
+    Route::get('orders', [\App\Http\Controllers\Admin\OrderController::class, 'index'])->name('orders');
 
     Route::get('services', [\App\Http\Controllers\Admin\ServiceController::class, 'index'])->name('services');
     Route::post('services/{service}/toggle', [\App\Http\Controllers\Admin\ServiceController::class, 'toggle'])->name('services.toggle');
@@ -175,13 +176,23 @@ Route::middleware(['auth', 'verified', 'admin'])->prefix('admin')->name('admin.'
     Route::post('users/{user}/suspend', [\App\Http\Controllers\Admin\UserController::class, 'suspend'])->name('users.suspend');
     Route::post('users/{user}/unsuspend', [\App\Http\Controllers\Admin\UserController::class, 'unsuspend'])->name('users.unsuspend');
 
-    Route::get('transactions', function () {
-        return Inertia::render('admin/transactions');
-    })->name('transactions');
+    // Tickets
+    Route::get('tickets', [\App\Http\Controllers\Admin\TicketController::class, 'index'])->name('tickets');
+    Route::get('tickets/{id}', [\App\Http\Controllers\Admin\TicketController::class, 'show'])->name('tickets.show');
+    Route::post('tickets/{id}/reply', [\App\Http\Controllers\Admin\TicketController::class, 'reply'])->name('tickets.reply');
+    Route::post('tickets/{id}/close', [\App\Http\Controllers\Admin\TicketController::class, 'close'])->name('tickets.close');
+    Route::post('tickets/{id}/reopen', [\App\Http\Controllers\Admin\TicketController::class, 'reopen'])->name('tickets.reopen');
 
-    Route::get('logs', function () {
-        return Inertia::render('admin/logs');
-    })->name('logs');
+    // News
+    Route::get('news', [\App\Http\Controllers\Admin\NewsController::class, 'index'])->name('news');
+    Route::post('news', [\App\Http\Controllers\Admin\NewsController::class, 'store'])->name('news.store');
+    Route::put('news/{news}', [\App\Http\Controllers\Admin\NewsController::class, 'update'])->name('news.update');
+    Route::delete('news/{news}', [\App\Http\Controllers\Admin\NewsController::class, 'destroy'])->name('news.destroy');
+    Route::post('news/{news}/toggle', [\App\Http\Controllers\Admin\NewsController::class, 'toggle'])->name('news.toggle');
+
+    Route::get('transactions', [\App\Http\Controllers\Admin\TransactionController::class, 'index'])->name('transactions');
+
+    Route::get('logs', [\App\Http\Controllers\Admin\LogController::class, 'index'])->name('logs');
 
     Route::get('settings', [\App\Http\Controllers\Admin\SettingsController::class, 'index'])->name('settings');
     Route::put('settings/profile', [\App\Http\Controllers\Admin\SettingsController::class, 'updateProfile'])->name('settings.profile');

@@ -1,5 +1,5 @@
 import AdminLayout from '@/layouts/admin-layout';
-import { Head } from '@inertiajs/react';
+import { Head, usePage } from '@inertiajs/react';
 import {
     Activity,
     AlertTriangle,
@@ -14,92 +14,35 @@ import {
     Users,
 } from 'lucide-react';
 
-// Mock data for statistics
-const stats = [
-    {
-        title: 'Total Pengguna',
-        value: '12,847',
-        change: '+12.5%',
-        trend: 'up',
-        icon: Users,
-        color: 'indigo',
-    },
-    {
-        title: 'Total Pesanan',
-        value: '48,293',
-        change: '+8.2%',
-        trend: 'up',
-        icon: ShoppingCart,
-        color: 'emerald',
-    },
-    {
-        title: 'Total Pendapatan',
-        value: 'Rp 847.5 Jt',
-        change: '+23.1%',
-        trend: 'up',
-        icon: DollarSign,
-        color: 'amber',
-    },
-    {
-        title: 'Layanan Aktif',
-        value: '1,284',
-        change: '-2.4%',
-        trend: 'down',
-        icon: Box,
-        color: 'rose',
-    },
-];
+interface Stats {
+    totalUsers: number;
+    usersChange: number;
+    totalOrders: number;
+    ordersChange: number;
+    totalRevenue: number;
+    revenueChange: number;
+    activeServices: number;
+    servicesChange: number;
+}
 
-// Mock data for recent orders
-const recentOrders = [
-    {
-        id: 'ORD-2026010001',
-        service: 'Instagram Followers [Server 3]',
-        user: 'akbarrayyan@gmail.com',
-        quantity: 1000,
-        status: 'selesai',
-        provider: 'Provider A',
-        date: '10 Jan 2026',
-    },
-    {
-        id: 'ORD-2026010002',
-        service: 'TikTok Likes [Fast]',
-        user: 'johndoe@gmail.com',
-        quantity: 500,
-        status: 'diproses',
-        provider: 'Provider B',
-        date: '10 Jan 2026',
-    },
-    {
-        id: 'ORD-2026010003',
-        service: 'YouTube Views [HQ]',
-        user: 'janedoe@gmail.com',
-        quantity: 5000,
-        status: 'menunggu',
-        provider: 'Provider A',
-        date: '10 Jan 2026',
-    },
-    {
-        id: 'ORD-2026010004',
-        service: 'Twitter Followers',
-        user: 'testuser@gmail.com',
-        quantity: 200,
-        status: 'sebagian',
-        provider: 'Provider C',
-        date: '09 Jan 2026',
-    },
-    {
-        id: 'ORD-2026010005',
-        service: 'Facebook Page Likes',
-        user: 'demo@gmail.com',
-        quantity: 100,
-        status: 'dibatalkan',
-        provider: 'Provider B',
-        date: '09 Jan 2026',
-    },
-];
+interface RecentOrder {
+    id: number;
+    service: string;
+    user: string;
+    quantity: number;
+    status: string;
+    status_label: string;
+    provider: string;
+    date: string;
+}
 
-// Mock data for provider health
+interface PageProps {
+    stats: Stats;
+    recentOrders: RecentOrder[];
+    [key: string]: unknown;
+}
+
+// Provider health mock (can be made real later)
 const providerHealth = [
     { name: 'Provider A', status: 'online', uptime: '99.9%', orders: 12450 },
     { name: 'Provider B', status: 'online', uptime: '98.5%', orders: 8230 },
@@ -108,11 +51,13 @@ const providerHealth = [
 ];
 
 const statusColors: Record<string, string> = {
-    menunggu: 'bg-slate-100 text-slate-600',
-    diproses: 'bg-blue-50 text-blue-600',
-    selesai: 'bg-emerald-50 text-emerald-600',
-    sebagian: 'bg-amber-50 text-amber-600',
-    dibatalkan: 'bg-rose-50 text-rose-600',
+    pending: 'bg-amber-50 text-amber-600',
+    processing: 'bg-blue-50 text-blue-600',
+    completed: 'bg-emerald-50 text-emerald-600',
+    partial: 'bg-orange-50 text-orange-600',
+    cancelled: 'bg-slate-100 text-slate-600',
+    refunded: 'bg-purple-50 text-purple-600',
+    error: 'bg-rose-50 text-rose-600',
 };
 
 const providerStatusColors: Record<string, string> = {
@@ -122,6 +67,60 @@ const providerStatusColors: Record<string, string> = {
 };
 
 export default function AdminDashboard() {
+    const { stats, recentOrders } = usePage<PageProps>().props;
+
+    const formatNumber = (num: number) => {
+        return num.toLocaleString('id-ID');
+    };
+
+    const formatCurrencyShort = (amount: number) => {
+        if (amount >= 1000000000) {
+            return `Rp ${(amount / 1000000000).toFixed(1)} M`;
+        }
+        if (amount >= 1000000) {
+            return `Rp ${(amount / 1000000).toFixed(1)} Jt`;
+        }
+        if (amount >= 1000) {
+            return `Rp ${(amount / 1000).toFixed(1)} Rb`;
+        }
+        return `Rp ${amount}`;
+    };
+
+    const statsCards = [
+        {
+            title: 'Total Pengguna',
+            value: formatNumber(stats.totalUsers),
+            change: `${stats.usersChange >= 0 ? '+' : ''}${stats.usersChange}%`,
+            trend: stats.usersChange >= 0 ? 'up' : 'down',
+            icon: Users,
+            color: 'indigo',
+        },
+        {
+            title: 'Total Pesanan',
+            value: formatNumber(stats.totalOrders),
+            change: `${stats.ordersChange >= 0 ? '+' : ''}${stats.ordersChange}%`,
+            trend: stats.ordersChange >= 0 ? 'up' : 'down',
+            icon: ShoppingCart,
+            color: 'emerald',
+        },
+        {
+            title: 'Total Pendapatan',
+            value: formatCurrencyShort(stats.totalRevenue),
+            change: `${stats.revenueChange >= 0 ? '+' : ''}${stats.revenueChange}%`,
+            trend: stats.revenueChange >= 0 ? 'up' : 'down',
+            icon: DollarSign,
+            color: 'amber',
+        },
+        {
+            title: 'Layanan Aktif',
+            value: formatNumber(stats.activeServices),
+            change: `${stats.servicesChange >= 0 ? '+' : ''}${stats.servicesChange}%`,
+            trend: stats.servicesChange >= 0 ? 'up' : 'down',
+            icon: Box,
+            color: 'rose',
+        },
+    ];
+
     return (
         <AdminLayout title="Dashboard Admin">
             <Head title="Dashboard Admin" />
@@ -129,7 +128,7 @@ export default function AdminDashboard() {
             <div className="space-y-6">
                 {/* Statistics Cards */}
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                    {stats.map((stat) => {
+                    {statsCards.map((stat) => {
                         const Icon = stat.icon;
                         const colorClasses: Record<
                             string,
@@ -467,8 +466,8 @@ export default function AdminDashboard() {
                                             className="hover:bg-slate-50/50"
                                         >
                                             <td className="px-4 py-3">
-                                                <span className="text-xs font-bold text-slate-700">
-                                                    {order.id}
+                                                <span className="font-mono text-xs font-bold text-slate-700">
+                                                    #{order.id}
                                                 </span>
                                             </td>
                                             <td className="max-w-[150px] px-4 py-3">
@@ -488,9 +487,9 @@ export default function AdminDashboard() {
                                             </td>
                                             <td className="px-4 py-3">
                                                 <span
-                                                    className={`inline-flex items-center rounded-md px-2 py-0.5 text-[10px] font-bold capitalize ${statusColors[order.status]}`}
+                                                    className={`inline-flex items-center rounded-md px-2 py-0.5 text-[10px] font-bold capitalize ${statusColors[order.status] || 'bg-slate-100 text-slate-600'}`}
                                                 >
-                                                    {order.status}
+                                                    {order.status_label}
                                                 </span>
                                             </td>
                                             <td className="px-4 py-3">
