@@ -130,4 +130,43 @@ Route::middleware(['auth', 'verified'])->group(function () {
     })->name('orders.mass');
 });
 
+// Admin Routes
+Route::middleware(['auth', 'verified'])->prefix('admin')->name('admin.')->group(function () {
+    Route::get('dashboard', function () {
+        return Inertia::render('admin/dashboard');
+    })->name('dashboard');
+
+    Route::get('orders', function () {
+        return Inertia::render('admin/orders');
+    })->name('orders');
+
+    Route::get('services', function () {
+        return Inertia::render('admin/services');
+    })->name('services');
+
+    Route::get('categories', function () {
+        return Inertia::render('admin/categories');
+    })->name('categories');
+
+    Route::get('providers', function () {
+        return Inertia::render('admin/providers');
+    })->name('providers');
+
+    Route::get('users', function () {
+        return Inertia::render('admin/users');
+    })->name('users');
+
+    Route::get('transactions', function () {
+        return Inertia::render('admin/transactions');
+    })->name('transactions');
+
+    Route::get('logs', function () {
+        return Inertia::render('admin/logs');
+    })->name('logs');
+
+    Route::get('settings', function () {
+        return Inertia::render('admin/settings');
+    })->name('settings');
+});
+
 require __DIR__.'/settings.php';
