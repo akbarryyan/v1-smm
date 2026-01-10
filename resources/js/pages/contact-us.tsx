@@ -163,7 +163,7 @@ export default function Contact() {
                                 <div className="hidden items-center justify-center lg:flex">
                                     <div className="relative">
                                         {/* Placeholder for illustration - you can replace with actual image */}
-                                        <div className="flex h-48 w-48 items-center justify-center rounded-full bg-gradient-to-br from-indigo-100 to-purple-100">
+                                        <div className="flex h-48 w-48 items-center justify-center rounded-full bg-linear-to-br from-indigo-100 to-purple-100">
                                             <div className="text-center">
                                                 <MessageCircle className="mx-auto mb-2 h-16 w-16 text-indigo-400" />
                                                 <p className="text-xs font-bold text-indigo-500">
